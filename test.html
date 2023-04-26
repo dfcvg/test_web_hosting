@@ -3,12 +3,28 @@
 <head>
 	<title>JavaScript Button Example</title>
 	<script>
-		function myFunction() {
-			alert("버튼이 클릭되었습니다!");
+		function goBack() {
+			window.Android.goBack();
+		}
+		function open(url) {
+			window.Android.open('https://www.naver.com');
+		}
+		function getSdkInfo() {
+			alert(window.Android.getSdkInfo());
+		}
+		function openWindow() {
+			window.open('https://www.google.com', "_blank");
+		}
+		function move() {
+			location.href = 'https://www.daum.net';
 		}
 	</script>
 </head>
 <body>
-	<button onclick="myFunction()">버튼</button>
+	<button onclick="goBack()">goBack 버튼</button><br />
+	<button onclick="open()">open 외부브라우저 naver 버튼</button><br />
+	<button onclick="getSdkInfo()">getSdkInfo 버튼</button><br />
+	<button onclick="openWindow()">openWindow 새창 네이버 버튼</button><br />
+	<button onclick="move()">다음 페이지  현재창 버튼</button><br />
 </body>
 </html>
