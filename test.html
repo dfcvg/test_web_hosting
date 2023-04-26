@@ -4,8 +4,8 @@
 	 <meta name="viewport" content="width=device-width">
 	<title>JavaScript Button Example</title>
 	<script>
-		function goBack() {
-			window.Android.goBack();
+		function closePopup() {
+			window.Android.closePopup();
 		}
 		function openBridge(url) {
 			window.Android.open('https://www.naver.com');
@@ -22,7 +22,7 @@
 	</script>
 </head>
 <body>
-	<button onclick="goBack()">goBack 버튼</button><br />
+	<button onclick="closePopup()">closePopup 버튼</button><br />
 	<button onclick="openBridge()">openBridge 외부브라우저 naver 버튼</button><br />
 	<button onclick="getSdkInfo()">getSdkInfo 버튼</button><br />
 	<button onclick="openWindow()">openWindow 새창 구글 버튼</button><br />
