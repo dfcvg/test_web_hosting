@@ -6,7 +6,7 @@
 		function goBack() {
 			window.Android.goBack();
 		}
-		function open(url) {
+		function openBridge(url) {
 			window.Android.open('https://www.naver.com');
 		}
 		function getSdkInfo() {
@@ -22,9 +22,9 @@
 </head>
 <body>
 	<button onclick="goBack()">goBack 버튼</button><br />
-	<button onclick="open()">open 외부브라우저 naver 버튼</button><br />
+	<button onclick="openBridge()">openBridge 외부브라우저 naver 버튼</button><br />
 	<button onclick="getSdkInfo()">getSdkInfo 버튼</button><br />
-	<button onclick="openWindow()">openWindow 새창 네이버 버튼</button><br />
+	<button onclick="openWindow()">openWindow 새창 구글 버튼</button><br />
 	<button onclick="move()">다음 페이지  현재창 버튼</button><br />
 </body>
 </html>
