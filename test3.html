@@ -33,3 +33,73 @@
 	 </script>
 
 </div>
+<div id="cauly_div2" style="text-align:center;height:100px">
+	 <script src="https://image.cauly.co.kr/richad_new/scripts/cauly_s2s_web.js"></script>
+	 <script>
+	window.addEventListener('load', function(){
+	 var appcode='toC1Txgq'
+	 var packageName=''
+	 var placement='2'
+	 var adid='-'
+	 var ad_dim='320x100'
+	 new CaulySAds('cauly_div3',adid,appcode,ad_dim,packageName,placement,
+	 function(){ },
+	 function(passback_data){
+	 console.log("passback")
+	 var ifr = document.createElement("iframe");
+	 ifr.setAttribute("scrolling", "0");
+	 ifr.setAttribute("marginheight", "0");
+	 ifr.setAttribute("marginwidth", "0");
+	 ifr.setAttribute("frameborder", "0");
+	 ifr.setAttribute("height", ad_dim.split('x')[1]+'px');
+	 ifr.setAttribute("width", '100%');
+	 document.getElementById("cauly_div2").appendChild(ifr);
+	 if (passback_data.indexOf('http')==0 ||passback_data.indexOf('//')==0 ){
+	 ifr.src = passback_data;
+	 }
+	 else{
+	 encrypt_pass = window.btoa(passback_data)
+	 ifr.contentWindow.document.write("<body style='text-align:center;'><scr"+"ipt>document.write(window.atob('"+encrypt_pass+"'))"+"</sc" +'ript></body>' )
+	}
+	}).loadAd()
+
+	});
+
+	 </script>
+
+</div>
+<div id="cauly_div" style="text-align:center;height:100px">
+	 <script src="https://image.cauly.co.kr/richad_new/scripts/cauly_s2s_web.js"></script>
+	 <script>
+	window.addEventListener('load', function(){
+	 var appcode='toC1Txgq'
+	 var packageName=''
+	 var placement='2'
+	 var adid='-'
+	 var ad_dim='320x100'
+	 new CaulySAds('cauly_div3',adid,appcode,ad_dim,packageName,placement,
+	 function(){ },
+	 function(passback_data){
+	 console.log("passback")
+	 var ifr = document.createElement("iframe");
+	 ifr.setAttribute("scrolling", "0");
+	 ifr.setAttribute("marginheight", "0");
+	 ifr.setAttribute("marginwidth", "0");
+	 ifr.setAttribute("frameborder", "0");
+	 ifr.setAttribute("height", ad_dim.split('x')[1]+'px');
+	 ifr.setAttribute("width", '100%');
+	 document.getElementById("cauly_div").appendChild(ifr);
+	 if (passback_data.indexOf('http')==0 ||passback_data.indexOf('//')==0 ){
+	 ifr.src = passback_data;
+	 }
+	 else{
+	 encrypt_pass = window.btoa(passback_data)
+	 ifr.contentWindow.document.write("<body style='text-align:center;'><scr"+"ipt>document.write(window.atob('"+encrypt_pass+"'))"+"</sc" +'ript></body>' )
+	}
+	}).loadAd()
+
+	});
+
+	 </script>
+
+</div>
