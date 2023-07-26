@@ -1,0 +1,21 @@
+<div id="cauly_div3">
+<script>
+	window.addEventListener('load', function(){
+	 console.log("passback")
+	 var ifr = document.createElement("iframe");
+	 ifr.setAttribute("scrolling", "0");
+	 ifr.setAttribute("marginheight", "0");
+	 ifr.setAttribute("marginwidth", "0");
+	 ifr.setAttribute("frameborder", "0");
+	 ifr.setAttribute("height", '100px');
+	 ifr.setAttribute("width", '100%');
+	 document.getElementById("cauly_div3").appendChild(ifr);
+
+	 ifr.contentWindow.document.write("<ifra"+"me src='https://adex.ednplus.com/xc/h/mMCbCqQt'></iframe>")
+	
+
+
+	});
+
+	 </script>
+</div>
