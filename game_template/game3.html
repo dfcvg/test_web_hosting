@@ -15,7 +15,7 @@
 
   <script >
 
-const frame = new Frame("fit", 1024, 768, light, darker, "brave.jpg", "https://assets.codepen.io/1604712/");
+const frame = new Frame("fit", 1024, 768, light, darker, "puzzle.jpg", "https://dfcvg.github.io/test_web_hosting/game_template/");
 frame.on("ready", ()=>{ 
    
 
@@ -87,7 +87,7 @@ frame.on("ready", ()=>{
     // ~~~~~~~~~~~~~~~~~~~~~
     // PICTURE
     
-    const pic = asset("brave.jpg").clone().center().alp(.3).vis(false); // checkbox later to turn on
+    const pic = asset("puzzle.jpg").clone().center().alp(.3).vis(false); // checkbox later to turn on
     const w = pic.width/numX;
     const h = pic.height/numY;   
     
@@ -95,7 +95,7 @@ frame.on("ready", ()=>{
     // false is for an array rather than the default Tile output 
     // extra is because bumps go outside the width and height
     const extra = Math.max(w,h)*Piece.gap; 
-    const pics = chop(asset("brave.jpg"), numX, numY, false, extra); 
+    const pics = chop(asset("puzzle.jpg"), numX, numY, false, extra); 
         
         
     // ~~~~~~~~~~~~~~~~~~~~~
