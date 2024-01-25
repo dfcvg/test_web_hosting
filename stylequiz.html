@@ -1,0 +1,248 @@
+<html><head>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <title>p</title>
+<style>
+@font-face { font-family: Arial !important; font-display: swap !important; }
+</style>
+<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
+                           
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<style>
+                                ::-webkit-scrollbar {
+                                  width: 8px;
+                                }
+                                /* Track */
+                                ::-webkit-scrollbar-track {
+                                  background: #f1f1f1; 
+                                }
+                                 
+                                /* Handle */
+                                ::-webkit-scrollbar-thumb {
+                                  background: #888; 
+                                }
+                                
+                                /* Handle on hover */
+                                ::-webkit-scrollbar-thumb:hover {
+                                  background: #555; 
+                                } @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body{
+    background-color: #333;
+}
+.container{
+    background-color: #555;
+    color: #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'Montserrat', sans-serif;
+    max-width: 700px;
+}
+.container > p{
+    font-size: 32px;
+}
+.question{
+    width: 75%;
+}
+.options{
+    position: relative;
+    padding-left: 40px;
+}
+#options label{
+    display: block;
+    margin-bottom: 15px;
+    font-size: 14px;
+    cursor: pointer;
+}
+.options input{
+    opacity: 0;
+}
+.checkmark {
+    position: absolute;
+    top: -1px;
+    left: 0;
+    height: 25px;
+    width: 25px;
+    background-color: #555;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+}
+.options input:checked ~ .checkmark:after {
+    display: block;
+}
+.options .checkmark:after{
+    content: "";
+	width: 10px;
+    height: 10px;
+    display: block;
+	background: white;
+    position: absolute;
+    top: 50%;
+	left: 50%;
+    border-radius: 50%;
+    transform: translate(-50%,-50%) scale(0);
+    transition: 300ms ease-in-out 0s;
+}
+.options input[type="radio"]:checked ~ .checkmark{
+    background: #21bf73;
+    transition: 300ms ease-in-out 0s;
+}
+.options input[type="radio"]:checked ~ .checkmark:after{
+    transform: translate(-50%,-50%) scale(1);
+}
+.btn-primary{
+    background-color: #555;
+    color: #ddd;
+    border: 1px solid #ddd;
+}
+.btn-primary:hover{
+    background-color: #21bf73;
+    border: 1px solid #21bf73;
+}
+.btn-success{
+    padding: 5px 25px;
+    background-color: #21bf73;
+}
+@media(max-width:576px){
+    .question{
+        width: 100%;
+        word-spacing: 2px;
+    } 
+}</style>
+</head>
+<body classname="snippet-body">
+ <div id='main' class="container mt-sm-5 my-1" style=''>
+    <div class="question ml-sm-5 pl-sm-5 pt-2">
+        <div class="py-2 h1"><b>스타일퀴즈</b></div>
+         <div class="py-2 h5"><b id='title'></b></div>
+          <div class="py-2 h5"><b id='styles'></b></div>
+    </div>
+        <div style='text-align: center;'>
+            <button class="btn btn-success" onclick="start()">시작하기</button>
+        </div>
+    </div>
+
+ <div id='quiz' class="container mt-sm-5 my-1" style='display:none'>
+    <div class="question ml-sm-5 pl-sm-5 pt-2">
+        <div class="py-2 h5"><b id='question'></b></div>
+        <div class="ml-md-3 ml-sm-3 pl-md-5 pt-sm-0 pt-3" id="options">
+	
+            <label class="options"><div id='q1'></div>
+                <input type="radio" name="radio" checked>
+                <span class="checkmark"></span>
+            </label>
+            <label class="options"><div id='q2'></div>
+                <input type="radio" name="radio">
+                <span class="checkmark"></span>
+            </label>
+            <label class="options"><div id='q3'></div>
+                <input type="radio" name="radio">
+                <span class="checkmark"></span>
+            </label>
+            <label class="options"><div id='q4'></div>
+                <input type="radio" name="radio">
+                <span class="checkmark"></span>
+            </label>
+        </div>
+    </div>
+    <div class="d-flex align-items-center pt-3">
+       
+        <div class="ml-auto mr-sm-5">
+            <button class="btn btn-success" onclick='save_and_next_quiz( )'>Next</button>
+        </div>
+    </div>
+       
+</div>
+<div id='result' class="container mt-sm-5 my-1" style='display:none'>
+    <div class="question ml-sm-5 pl-sm-5 pt-2">
+        <div class="py-2 h1"><b>결과 페이지</b></div>
+         <div class="py-2 h5"><b id='result_title'> </b></div>
+          <div class="py-2 h5"><b id='result_desc'></b></div>
+    </div>
+</div>
+<script>
+const quiz_datas =[{'title': '나의 연예스타일',
+  'sub': '보석유형테스트',
+  'esc': '\n{\n  "quiz": {\n    "questions": [\n      {\n        "question": "아침에 가장 먼저 하는 일은?",\n        "options": [\n          {"1": "뉴스 체크하기", "target_style":"아메리카노"},\n          {"2": "스트레칭 또는 가벼운 운동", "target_style":"카푸치노"},\n          {"3": "이메일 확인하기", "target_style":"에스프레소"},\n          {"4": "음악 듣기", "target_style":"카페 모카"}\n        ]\n      },\n      {\n        "question": "여가 시간에 주로 하는 활동은?",\n        "options": [\n          {"1": "책 읽기", "target_style":"플랫 화이트"},\n          {"2": "영화 보기", "target_style":"카페 라떼"},\n          {"3": "친구들과 만나기", "target_style":"카라멜 마키아토"},\n          {"4": "요리하기", "target_style":"리스트레토"}\n        ]\n      },\n      {\n        "question": "친구들과의 모임에서 선호하는 장소는?",\n        "options": [\n          {"1": "북적이는 카페", "target_style":"카라멜 마키아토"},\n          {"2": "조용한 도서관", "target_style":"에스프레소"},\n          {"3": "자연이 가득한 공원", "target_style":"아메리카노"},\n          {"4": "편안한 집", "target_style":"플랫 화이트"}\n        ]\n      },\n      {\n        "question": "스트레스를 받을 때 어떻게 해소하는가?",\n        "options": [\n          {"1": "맛있는 음식 먹기", "target_style":"카페 모카"},\n          {"2": "친구와 대화하기", "target_style":"카페 라떼"},\n          {"3": "조용히 쉬기", "target_style":"리스트레토"},\n          {"4": "운동하기", "target_style":"카푸치노"}\n        ]\n      },\n      {\n        "question": "주말 아침의 이상적인 시작은?",\n        "options": [\n          {"1": "산책", "target_style":"아메리카노"},\n          {"2": "침대에서 느긋하게", "target_style":"플랫 화이트"},\n          {"3": "취미 활동", "target_style":"리스트레토"},\n          {"4": "아침식사 준비", "target_style":"카페 라떼"}\n        ]\n      },\n      {\n        "question": "여행을 갈 때 가장 중요하게 생각하는 것은?",\n        "options": [\n          {"1": "문화 체험", "target_style":"카페 모카"},\n          {"2": "휴식", "target_style":"플랫 화이트"},\n          {"3": "새로운 음식 시도", "target_style":"카라멜 마키아토"},\n          {"4": "활동적인 모험", "target_style":"에스프레소"}\n        ]\n      },\n      {\n        "question": "일상에서 가장 중요하게 생각하는 것은?",\n        "options": [\n          {"1": "건강", "target_style":"카푸치노"},\n          {"2": "취미", "target_style":"리스트레토"},\n          {"3": "친구 및 가족", "target_style":"카페 라떼"},\n          {"4": "자기계발", "target_style":"에스프레소"}\n        ]\n      },\n      {\n        "question": "가장 좋아하는 계절은?",\n        "options": [\n          {"1": "봄", "target_style":"카페 라떼"},\n          {"2": "여름", "target_style":"카라멜 마키아토"},\n          {"3": "가을", "target_style":"플랫 화이트"},\n          {"4": "겨울", "target_style":"카페 모카"}\n        ]\n      }\n    ]\n  },\n  "target_styles": {\n    "아메리카노": "기본에 충실하고, 간결함을 선호하는 스타일",\n    "카푸치노": "활기차고, 다이내믹한 스타일",\n    "에스프레소": "강렬하고, 목표 지향적인 스타일",\n    "카페 모카": "감각적이고, 예술적인 성향을 가진 스타일",\n    "플랫 화이트": "편안하고, 안정적인 스타일",\n    "카페 라떼": "부드럽고, 조화로운 스타일",\n    "카라멜 마키아토": "달콤하고, 즐거움을 추구하는 스타일",\n    "리스트레토": "세련되고, 깊이 있는 스타일"\n  }\n}\n\n'},
+ {'title': '나의 공부 스타일',
+  'sub': '포유류유형테스트',
+  'esc': '\n{\n  "quiz": {\n    "questions": [\n      {\n        "question": "공부할 때 가장 선호하는 환경은?",\n        "options": [\n          {"1": "조용하고 혼자 있는 곳", "target_style":"올빼미"},\n          {"2": "사람들이 많고 활기찬 곳", "target_style":"원숭이"},\n          {"3": "자연 속에서", "target_style":"사슴"},\n          {"4": "편안하고 익숙한 내 방", "target_style":"고양이"}\n        ]\n      },\n      {\n        "question": "시험 기간에 가장 많이 하는 활동은?",\n        "options": [\n          {"1": "계획 세우고 체계적으로 공부하기", "target_style":"코끼리"},\n          {"2": "친구들과 함께 스터디 그룹 만들기", "target_style":"원숭이"},\n          {"3": "마지막 순간에 밤샘 공부", "target_style":"올빼미"},\n          {"4": "필요한 부분만 집중해서 공부하기", "target_style":"여우"}\n        ]\n      },\n      {\n        "question": "공부할 때 가장 좋아하는 방식은?",\n        "options": [\n          {"1": "실제 사례를 통해 배우기", "target_style":"사자"},\n          {"2": "그래픽과 시각적 자료 사용하기", "target_style":"원숭이"},\n          {"3": "독서 및 글쓰기", "target_style":"고양이"},\n          {"4": "강의 듣고 필기하기", "target_style":"코끼리"}\n        ]\n      },\n      {\n        "question": "집중력이 떨어질 때 가장 자주 하는 행동은?",\n        "options": [\n          {"1": "짧은 휴식을 취하기", "target_style":"여우"},\n          {"2": "간식 먹기", "target_style":"원숭이"},\n          {"3": "잠시 외출하기", "target_style":"사슴"},\n          {"4": "집중을 위한 새로운 환경 찾기", "target_style":"올빼미"}\n        ]\n      },\n      {\n        "question": "새로운 주제를 공부할 때 가장 선호하는 방법은?",\n        "options": [\n          {"1": "단계별로 차근차근 배우기", "target_style":"코끼리"},\n          {"2": "실험하고 탐험하기", "target_style":"여우"},\n          {"3": "다양한 사람들과 토론하기", "target_style":"원숭이"},\n          {"4": "혼자 조용히 책과 자료 읽기", "target_style":"고양이"}\n        ]\n      },\n      {\n        "question": "어려운 문제에 부딪혔을 때 당신의 반응은?",\n        "options": [\n          {"1": "포기하지 않고 계속 시도하기", "target_style":"사자"},\n          {"2": "다른 사람의 도움 요청하기", "target_style":"원숭이"},\n          {"3": "잠시 다른 일에 집중하기", "target_style":"여우"},\n          {"4": "문제를 다른 방식으로 접근하기", "target_style":"올빼미"}\n        ]\n      },\n      {\n        "question": "가장 선호하는 과목 유형은?",\n        "options": [\n          {"1": "논리적이고 체계적인 과목", "target_style":"코끼리"},\n          {"2": "창의적이고 예술적인 과목", "target_style":"사자"},\n          {"3": "사회적 상호작용이 많은 과목", "target_style":"원숭이"},\n          {"4": "자율적이고 탐구적인 과목", "target_style":"여우"}\n        ]\n      },\n      {\n        "question": "공부를 할 때 가장 중요하게 생각하는 것은?",\n        "options": [\n          {"1": "결과와 성취", "target_style":"사자"},\n          {"2": "과정과 경험", "target_style":"사슴"},\n          {"3": "친구들과의 협력", "target_style":"원숭이"},\n          {"4": "자기 개발", "target_style":"고양이"}\n        ]\n      }\n    ]\n  },\n  "target_styles": {\n    "올빼미": "야행성, 독립적이며, 효율적인 공부 스타일",\n    "원숭이": "사회적, 활동적이고, 그룹 학습을 선호하는 스타일",\n    "사슴": "조용하고, 자연을 사랑하는 집중력 높은 스타일",\n    "고양이": "독립적이고, 혼자 공부하는 것을 선호하는 스타일",\n    "코끼리": "조직적이고, 체계적인 학습 방식을 가진 스타일",\n    "여우": "기민하고, 유연한 사고를 가진 스타일",\n    "사자": "목표 지향적이고, 리더십이 강한 스타일"\n  }\n}\n\n'},
+ {'title': '나의 업무 스타일',
+  'sub': '조류유형테스트',
+  'esc': '\n{\n  "quiz": {\n    "questions": [\n      {\n        "question": "당신은 새로운 프로젝트를 시작할 때 어떻게 접근하나요?",\n        "options": [\n          {"1": "세부 사항에 집중하며 철저히 계획합니다.", "target_style":"올빼미"},\n          {"2": "직관적으로 대처하며 유연하게 변화를 수용합니다.", "target_style":"참새"},\n          {"3": "목표를 설정하고 빠르게 돌파합니다.", "target_style":"독수리"},\n          {"4": "팀원들과 의견을 나누며 협력합니다.", "target_style":"앵무새"}\n        ]\n      },\n      {\n        "question": "문제가 발생했을 때 당신의 대응 방식은?",\n        "options": [\n          {"1": "침착하게 분석하고 해결책을 찾습니다.", "target_style":"올빼미"},\n          {"2": "즉시 대응하며 빠른 해결을 추구합니다.", "target_style":"독수리"},\n          {"3": "주변 사람들과 의논하며 해결책을 모색합니다.", "target_style":"앵무새"},\n          {"4": "유연하게 상황에 적응하며 해결책을 찾습니다.", "target_style":"참새"}\n        ]\n      },\n      {\n        "question": "협업을 할 때 당신은 어떤 역할을 맡는 것을 선호하나요?",\n        "options": [\n          {"1": "팀을 이끄는 리더의 역할", "target_style":"독수리"},\n          {"2": "팀원들의 의견을 조율하는 조정자", "target_style":"앵무새"},\n          {"3": "구체적인 실행 계획을 세우는 계획가", "target_style":"올빼미"},\n          {"4": "자유롭게 아이디어를 제시하는 창의적인 사람", "target_style":"참새"}\n        ]\n      },\n      {\n        "question": "스트레스를 받았을 때 당신의 해소 방법은?",\n        "options": [\n          {"1": "조용히 혼자 시간을 가지며 생각합니다.", "target_style":"올빼미"},\n          {"2": "적극적으로 문제를 해결하려 노력합니다.", "target_style":"독수리"},\n          {"3": "사람들과 얘기하며 스트레스를 해소합니다.", "target_style":"앵무새"},\n          {"4": "변화와 새로운 활동을 통해 스트레스를 해소합니다.", "target_style":"참새"}\n        ]\n      },\n      {\n        "question": "새로운 아이디어를 생각할 때 당신의 접근 방식은?",\n        "options": [\n          {"1": "논리적이고 체계적으로 생각합니다.", "target_style":"올빼미"},\n          {"2": "직관적이고 즉흥적으로 아이디어를 떠올립니다.", "target_style":"참새"},\n          {"3": "목표와 결과에 집중하며 생각합니다.", "target_style":"독수리"},\n          {"4": "다양한 사람들과 의견을 나누며 아이디어를 확장합니다.", "target_style":"앵무새"}\n        ]\n      },\n      {\n        "question": "목표를 달성하기 위한 당신의 방식은?",\n        "options": [\n          {"1": "단계별로 천천히 그리고 꾸준히 진행합니다.", "target_style":"올빼미"},\n          {"2": "빠르고 적극적으로 목표를 추구합니다.", "target_style":"독수리"},\n          {"3": "유연하고 적응적인 방식으로 접근합니다.", "target_style":"참새"},\n          {"4": "팀원들과 협력하며 함께 목표를 달성합니다.", "target_style":"앵무새"}\n        ]\n      },\n      {\n        "question": "새로운 환경에 적응할 때 당신의 태도는?",\n        "options": [\n          {"1": "조심스럽고 체계적으로 적응합니다.", "target_style":"올빼미"},\n          {"2": "빠르게 상황을 파악하고 적응합니다.", "target_style":"독수리"},\n          {"3": "사람들과 교류하며 자연스럽게 적응합니다.", "target_style":"앵무새"},\n          {"4": "유연하게 변화에 적응하며 즐깁니다.", "target_style":"참새"}\n        ]\n      },\n      {\n        "question": "결정을 내릴 때 당신은 어떻게 하나요?",\n        "options": [\n          {"1": "사실과 데이터를 기반으로 철저히 분석합니다.", "target_style":"올빼미"},\n          {"2": "빠르고 단호하게 결정을 내립니다.", "target_style":"독수리"},\n          {"3": "타인의 의견을 고려하며 조율합니다.", "target_style":"앵무새"},\n          {"4": "상황에 따라 유연하게 결정합니다.", "target_style":"참새"}\n        ]\n      }\n    ]\n  },\n  "target_styles": {\n    "올빼미": "상세한 분석과 체계적인 접근을 선호하는 스타일입니다. 조용하고 신중하며, 계획적으로 일합니다.",\n    "참새": "유연하고 적응력이 뛰어난 스타일입니다. 새로운 상황과 변화에 잘 적응하며, 창의적인 아이디어를 가집니다.",\n    "독수리": "목표 지향적이고 단호한 스타일입니다. 빠르게 결정을 내리고, 리더십을 발휘하여 목표를 향해 나아갑니다.",\n    "앵무새": "사교적이고 협력적인 스타일입니다. 타인과의 의사소통을 중시하며, 팀워크를 통해 문제를 해결합니다."\n  }\n}\n\n'},
+ {'title': '내가 좋아하는 향수 스타일',
+  'sub': '향수유형테스트',
+  'esc': '\n{\n  "quiz": {\n    "questions": [\n      {\n        "question": "1. 당신이 선호하는 계절은?",\n        "options": [\n          {"1": "봄", "target_style": "플로랄"},\n          {"2": "여름", "target_style": "시트러스"},\n          {"3": "가을", "target_style": "우디"},\n          {"4": "겨울", "target_style": "오리엔탈"}\n        ]\n      },\n      {\n        "question": "2. 당신이 선호하는 활동은?",\n        "options": [\n          {"1": "등산", "target_style": "우디"},\n          {"2": "해변가 산책", "target_style": "아쿠아틱"},\n          {"3": "정원 가꾸기", "target_style": "그린"},\n          {"4": "요가 또는 명상", "target_style": "머스크"}\n        ]\n      },\n      {\n        "question": "3. 가장 좋아하는 음식의 종류는?",\n        "options": [\n          {"1": "스파이시한 음식", "target_style": "스파이시"},\n          {"2": "상큼한 과일", "target_style": "프루티"},\n          {"3": "고소한 디저트", "target_style": "가메론"},\n          {"4": "전통적인 음식", "target_style": "오리엔탈"}\n        ]\n      },\n      {\n        "question": "4. 선호하는 여행지의 유형은?",\n        "options": [\n          {"1": "산속의 통나무집", "target_style": "우디"},\n          {"2": "해변가 리조트", "target_style": "아쿠아틱"},\n          {"3": "꽃이 가득한 작은 마을", "target_style": "플로랄"},\n          {"4": "역사적인 도시", "target_style": "머스크"}\n        ]\n      },\n      {\n        "question": "5. 가장 좋아하는 시간대는?",\n        "options": [\n          {"1": "아침의 상쾌함", "target_style": "시트러스"},\n          {"2": "오후의 활동적인 시간", "target_style": "그린"},\n          {"3": "저녁의 여유로운 시간", "target_style": "가메론"},\n          {"4": "밤의 고요함", "target_style": "스파이시"}\n        ]\n      },\n      {\n        "question": "6. 당신이 좋아하는 꽃의 종류는?",\n        "options": [\n          {"1": "장미", "target_style": "플로랄"},\n          {"2": "라벤더", "target_style": "프루티"},\n          {"3": "쟈스민", "target_style": "우디"},\n          {"4": "백합", "target_style": "머스크"}\n        ]\n      }\n    ]\n  },\n  "target_styles": {\n    "플로랄": "꽃향기가 주를 이루는, 여성스럽고 부드러운 향",\n    "시트러스": "상큼하고 청량감 있는 과일 향, 활기찬 느낌",\n    "우디": "나무나 숲의 향기, 따뜻하고 편안한 느낌",\n    "오리엔탈": "동양적인 향료와 향신료의 조화, 신비롭고 관능적인 향",\n    "아쿠아틱": "바다나 물의 청량감, 시원하고 맑은 느낌",\n    "그린": "푸른 잔디나 잎의 향기, 자연스러운 느낌",\n    "머스크": "부드럽고 은은한 향, 섬세하고 우아한 느낌",\n    "스파이시": "향신료가 강조된 향, 강렬하고 도발적인 느낌",\n    "프루티": "달콤한 과일 향, 즐거우면서도 사랑스러운 느낌",\n    "가메론": "부드럽고 달콤한 베이커리 향, 포근하고 편안한 느낌"\n  }\n}\n\n'},
+ {'title': '내가 좋아하는 이성 스타일',
+  'sub': '영화유형테스트',
+  'esc': '\n{\n  "quiz": {\n    "questions": [\n      {\n        "question": "1. 당신이 가장 매력적이라고 생각하는 이성의 성격은?",\n        "options": [\n          {"1": "지적이고 분석적인", "target_style": "영화 \'쉐르록 홈즈\'"},\n          {"2": "모험적이고 대담한", "target_style": "영화 \'인디아나 존스\'"},\n          {"3": "재치 있고 유머러스한", "target_style": "영화 \'가디언즈 오브 갤럭시\'"},\n          {"4": "감성적이고 예술적인", "target_style": "영화 \'라라랜드\'"}\n        ]\n      },\n      {\n        "question": "2. 이성과의 이상적인 첫 데이트 장소는?",\n        "options": [\n          {"1": "고급 레스토랑", "target_style": "영화 \'프리티 우먼\'"},\n          {"2": "테마파크", "target_style": "영화 \'인디아나 존스\'"},\n          {"3": "커피숍", "target_style": "영화 \'비포 선라이즈\'"},\n          {"4": "미술관 또는 전시회", "target_style": "영화 \'라라랜드\'"}\n        ]\n      },\n      {\n        "question": "3. 이상적인 이성의 취미 또는 관심사는?",\n        "options": [\n          {"1": "과학 또는 기술", "target_style": "영화 \'아이언맨\'"},\n          {"2": "여행과 탐험", "target_style": "영화 \'인디아나 존스\'"},\n          {"3": "음악 또는 예술", "target_style": "영화 \'라라랜드\'"},\n          {"4": "책 읽기 또는 글쓰기", "target_style": "영화 \'비포 선라이즈\'"}\n        ]\n      },\n      {\n        "question": "4. 이상적인 이성이 갖춰야 할 외모적 특징은?",\n        "options": [\n          {"1": "클래식하고 우아한", "target_style": "영화 \'프리티 우먼\'"},\n          {"2": "모험적이고 활동적인", "target_style": "영화 \'인디아나 존스\'"},\n          {"3": "자유분방하고 개성적인", "target_style": "영화 \'가디언즈 오브 갤럭시\'"},\n          {"4": "예술적이고 세련된", "target_style": "영화 \'라라랜드\'"}\n        ]\n      },\n      {\n        "question": "5. 이상적인 이성과의 관계 유형은?",\n        "options": [\n          {"1": "지적인 대화를 나누는", "target_style": "영화 \'비포 선라이즈\'"},\n          {"2": "함께 모험을 즐기는", "target_style": "영화 \'인디아나 존스\'"},\n          {"3": "유머와 재미를 함께하는", "target_style": "영화 \'가디언즈 오브 갤럭시\'"},\n          {"4": "예술과 문화를 함께 즐기는", "target_style": "영화 \'라라랜드\'"}\n        ]\n      },\n      {\n        "question": "6. 이성과의 관계에서 가장 중요한 것은?",\n        "options": [\n          {"1": "신뢰와 이해", "target_style": "영화 \'비포 선라이즈\'"},\n          {"2": "모험과 열정", "target_style": "영화 \'인디아나 존스\'"},\n          {"3": "재미와 웃음", "target_style": "영화 \'가디언즈 오브 갤럭시\'"},\n          {"4": "예술과 감성", "target_style": "영화 \'라라랜드\'"}\n        ]\n      }\n    ]\n  },\n  "target_styles": {\n    "영화 \'쉐르록 홈즈\'": "지적이고 분석적인 캐릭터, 미스터리와 추리가 중심",\n    "영화 \'인디아나 존스\'": "모험적이고 대담한 캐릭터, 흥미진진한 탐험과 액션이 특징",\n    "영화 \'가디언즈 오브 갤럭시\'": "재치 있고 유머러스한 캐릭터, 즐거움과 웃음이 넘치는",\n    "영화 \'라라랜드\'": "감성적이고 예술적인 캐릭터, 음악과 예술의 아름다움을 강조",\n    "영화 \'프리티 우먼\'": "클래식하고 우아한 캐릭터, 로맨틱하고 고급스러운 분위기",\n    "영화 \'비포 선라이즈\'": "지적인 대화와 깊은 연결이 중요한 캐릭터, 현실적인 로맨스가 특징",\n    "영화 \'아이언맨\'": "과학적이고 혁신적인 캐릭터, 기술과 액션이 결합된 스타일"\n  }\n}\n\n'},
+ {'title': '내가 좋아하는 이성 스타일',
+  'sub': '국적유형테스트',
+  'esc': '\n{\n  "quiz": {\n    "questions": [\n      {\n        "question": "1. 이상적인 이성의 성격은?",\n        "options": [\n          {"1": "열정적이고 생기 넘치는", "target_style": "브라질"},\n          {"2": "조용하고 신중한", "target_style": "일본"},\n          {"3": "자유롭고 개방적인", "target_style": "미국"},\n          {"4": "정교하고 체계적인", "target_style": "독일"}\n        ]\n      },\n      {\n        "question": "2. 이성과의 이상적인 첫 만남은?",\n        "options": [\n          {"1": "흥미로운 문화 탐험", "target_style": "이탈리아"},\n          {"2": "자연 속에서의 여유로운 산책", "target_style": "스위스"},\n          {"3": "도시의 활기찬 분위기 속에서", "target_style": "한국"},\n          {"4": "집에서의 편안한 시간", "target_style": "중국"}\n        ]\n      },\n      {\n        "question": "3. 이상적인 이성의 취미 또는 관심사는?",\n        "options": [\n          {"1": "예술과 패션", "target_style": "이탈리아"},\n          {"2": "기술과 혁신", "target_style": "독일"},\n          {"3": "자연과 야외 활동", "target_style": "스위스"},\n          {"4": "음식과 요리", "target_style": "한국"}\n        ]\n      },\n      {\n        "question": "4. 이상적인 이성의 외모적 특징은?",\n        "options": [\n          {"1": "스타일리시하고 패셔너블한", "target_style": "이탈리아"},\n          {"2": "클래식하고 정제된", "target_style": "독일"},\n          {"3": "자연스럽고 편안한", "target_style": "스위스"},\n          {"4": "생기발랄하고 활동적인", "target_style": "브라질"}\n        ]\n      },\n      {\n        "question": "5. 이상적인 이성과의 관계 유형은?",\n        "options": [\n          {"1": "감성적이고 낭만적인", "target_style": "이탈리아"},\n          {"2": "신뢰할 수 있고 안정적인", "target_style": "독일"},\n          {"3": "활동적이고 모험적인", "target_style": "미국"},\n          {"4": "편안하고 가정적인", "target_style": "중국"}\n        ]\n      },\n      {\n        "question": "6. 이성과의 관계에서 가장 중요한 것은?",\n        "options": [\n          {"1": "열정과 사랑", "target_style": "브라질"},\n          {"2": "조화와 평화", "target_style": "일본"},\n          {"3": "자유와 독립", "target_style": "미국"},\n          {"4": "안정성과 신뢰", "target_style": "스위스"}\n        ]\n      }\n    ]\n  },\n  "target_styles": {\n    "한국": "현대적이고 도시적인 매력, K-팝과 한류 문화의 영향",\n    "일본": "전통과 현대가 조화를 이루는 섬세함, 조용하고 신중한 매력",\n    "중국": "역사와 문화가 깊이 있는, 집과 가족 중심적인 스타일",\n    "미국": "자유롭고 개방적인 태도, 다양한 문화의 융합",\n    "독일": "체계적이고 실용적인 접근, 클래식하고 정제된 스타일",\n    "스위스": "자연과 조화를 중시하는, 평화롭고 안정적인 스타일",\n    "이탈리아": "감성적이고 낭만적인, 예술과 패션의 중심",\n    "브라질": "열정적이고 생기 넘치는, 축제와 음악의 나라"\n  }\n}\n\n'}]
+
+const rand_0_5 = Math.floor(Math.random() * 5);
+const quiz_data=quiz_datas [rand_0_5 ]
+const questions = JSON.parse(quiz_data ['esc'])['quiz']['questions'];
+const len_question = questions .length;
+function init(){
+	document.getElementById('title').innerHTML= quiz_data['title']
+	document.getElementById('styles').innerHTML= quiz_data['sub']
+}
+function start(){
+	document.getElementById('main').style.display='none';
+	document.getElementById('quiz').style.display='block'; 
+	load_next_quiz(  )
+}
+var  c_page = 0;
+var result_arr =[]
+function show_result(){
+
+	const result = {};
+	result_arr.forEach((x) => { 
+	  result[x] = (result[x] || 0)+1; 
+	});
+	const max_key = Object.keys(result).reduce(function(a, b){ return result[a] > result[b] ? a : b });
+	document.getElementById('quiz').style.display='none'; 
+	document.getElementById('result').style.display='block'; 
+	document.getElementById('result_title').innerHTML="당신의 타입은 "+max_key +' 입니다. '
+	document.getElementById('result_desc').innerHTML="설명 : "+ JSON.parse(quiz_data ['esc'])['target_styles'][max_key]
+}
+function save_and_next_quiz( ){
+if(c_page<len_question){
+	var ele = document.getElementsByName('radio'); 
+
+	for(var i=0; i < ele.length; i++) {
+		if(ele[i].checked === true) { // checked 속성이 true 와 같은지 비교합니다.
+ 	 		result_arr.push(  questions [c_page ]['options'][i]['target_style'] ) 
+ 		 }
+	}
+	
+}
+ load_next_quiz( )
+}
+function  load_next_quiz(  ){
+	if(c_page<len_question){
+		document.getElementById('question').innerHTML = questions [c_page ]['question']
+		document.getElementById('q1').innerHTML = questions [c_page ]['options'][0]['1']
+		document.getElementById('q2').innerHTML = questions [c_page ]['options'][1]['2']
+		document.getElementById('q3').innerHTML = questions [c_page ]['options'][2]['3']
+		document.getElementById('q4').innerHTML = questions [c_page ]['options'][3]['4']
+	}
+	else{
+		show_result();
+	}
+      	
+	c_page  = c_page +1;
+}
+
+init()
+</script>
+<script type="text/javascript" src="https://stackpath.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js"></script>
+                                
+ </body></html>
