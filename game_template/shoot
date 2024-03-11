@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #game-container {
+        position: relative;
+      }
+      #control-buttons {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        display: flex;
+      }
+      .control-button {
+        width: 50px;
+        height: 50px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border: none;
+        outline: none;
+        border-radius: 25px;
+        margin-right: 10px;
+        font-size: 24px;
+      }
+      #fire-button {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border: none;
+        outline: none;
+        border-radius: 25px;
+        font-size: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container"></div>
+    <div id="control-buttons">
+      <button class="control-button" id="left-button">&#8676;</button>
+      <button class="control-button" id="right-button">&#8677;</button>
+    </div>
+    <button id="fire-button">&#10032;</button>
+
+    <script>
+      const config = {
+        type: Phaser.AUTO,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scene: {
+          preload: preload,
+          create: create,
+          update: update,
+        },
+        physics: {
+          default: 'arcade',
+          arcade: {
+            gravity: { y: 0 },
+          },
+        },
+      };
+
+      const game = new Phaser.Game(config);
+
+      let player;
+      let enemies;
+      let enemies2;
+      let bullets;
+      let lastEnemySpawnTime = 0;
+      let score = 0;
+      let lives = 3;
+      let gameOver = false;
+      let startButton;
+
+      function preload() {
+        this.load.image('background', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('player', 'https://labs.phaser.io/assets/sprites/ship.png');
+        this.load.image('enemy', 'https://labs.phaser.io/assets/sprites/xenon2_ship.png');
+        this.load.image('bullet', 'https://labs.phaser.io/assets/sprites/bullets/bullet6.png');
+      }
+
+      function create() {
+        // 배경 추가
+        this.add.image(config.width / 2, config.height / 2, 'background');
+
+        // 플레이어 추가
+        player = this.physics.add.sprite(config.width / 2, config.height - 100, 'player');
+        player.setCollideWorldBounds(true);
+
+        // 적 그룹 생성
+        enemies = this.physics.add.group({
+          defaultKey: 'enemy',
+          maxSize: 30,
+        });
+        enemies2 = this.physics.add.group({
+          defaultKey: 'enemy',
+          maxSize: 30,
+        });
+
+        // 총알 그룹 생성
+        bullets = this.physics.add.group({
+          defaultKey: 'bullet',
+          maxSize: 30,
+        });
+
+        // 점수 및 라이프 텍스트 추가
+        this.scoreText = this.add.text(16, 16, `Score: ${score}`, { fontSize: '32px', fill: '#fff' });
+        this.livesText = this.add.text(16, 48, `Lives: ${lives}`, { fontSize: '32px', fill: '#fff' });
+
+        // 시작 버튼 추가
+        startButton = this.add.text(config.width / 2, config.height / 2, 'Click to Start', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+        startButton.setInteractive();
+        startButton.on('pointerdown', startGame, this);
+
+        // 버튼 이벤트 처리
+        const leftButton = document.getElementById('left-button');
+        const rightButton = document.getElementById('right-button');
+        const fireButton = document.getElementById('fire-button');
+
+        leftButton.addEventListener('touchstart', () => {
+          player.setVelocityX(-600);
+        });
+        leftButton.addEventListener('touchend', () => {
+          player.setVelocityX(0);
+        });
+
+        rightButton.addEventListener('touchstart', () => {
+          player.setVelocityX(600);
+        });
+        rightButton.addEventListener('touchend', () => {
+          player.setVelocityX(0);
+        });
+
+        fireButton.addEventListener('touchstart', shootBullet);
+      }
+
+      function update(time) {
+        if (!gameOver) {
+          // 적 생성
+          if (time > lastEnemySpawnTime + 1000) {
+            const enemy = enemies.get();
+            if (!enemy) return;
+
+            enemy.setActive(true);
+            enemy.setVisible(true);
+            enemy.setAngle(180)
+            enemy.setPosition(Phaser.Math.Between(50, config.width - 50), 0);
+            enemy.setVelocityY(Phaser.Math.Between(100, 300));
+
+            const enemy2 = enemies2.get();
+            if (!enemy2) return;
+
+            enemy2.setActive(true);
+            enemy2.setVisible(true);
+            enemy2.setAngle(180)
+            enemy2.setScale(2)
+            enemy2.setPosition(Phaser.Math.Between(50, config.width - 50), 0);
+            enemy2.setVelocityY(Phaser.Math.Between(100, 300));
+
+            lastEnemySpawnTime = time;
+          }
+
+          // 총알과 적 충돌 처리
+          this.physics.overlap(bullets, enemies, hitEnemy, null, this);
+          this.physics.overlap(bullets, enemies2, hitEnemy2, null, this);
+
+          // 화면 밖으로 나간 총알 제거
+          bullets.children.iterate(bullet => {
+            if (bullet.y < 0) {
+              bullets.killAndHide(bullet);
+            } else {
+              bullet.setActive(true);
+              bullet.setVisible(true);
+            }
+          });
+
+          // 화면 밖으로 나간 적 제거
+          enemies.children.iterate(enemy => {
+            if (!!enemy)
+              if (enemy.y > config.height) {
+                enemies.killAndHide(enemy);
+                enemies.remove(enemy, true, true); // 적 제거
+                if (lives > 0) {
+                  lives--;
+                  this.livesText.setText(`Lives: ${lives}`);
+                  if (lives === 0) {
+                    gameOver = true;
+                    this.add.text(config.width / 2, config.height / 2, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+                  }
+                }
+              } else {
+                enemy.setActive(true);
+                enemy.setVisible(true);
+              }
+          });
+        }
+      }
+
+      function shootBullet() {
+        if (!gameOver) {
+          const bullet = bullets.get();
+          if (!bullet) return;
+
+          bullet.setActive(true);
+          bullet.setVisible(true);
+          bullet.setAngle(90);
+          bullet.setPosition(player.x, player.y);
+          bullet.setVelocityY(-600);
+        }
+      }
+
+      function hitEnemy(bullet, enemy) {
+        bullets.remove(bullet, true, true); // 총알 제거
+        enemies.remove(enemy, true, true); // 적 제거
+        score += 10;
+        this.scoreText.setText(`Score: ${score}`);
+      }
+
+      function hitEnemy2(bullet, enemy) {
+        bullets.remove(bullet, true, true); // 총알 제거
+        enemies2.remove(enemy, true, true); // 적 제거
+        score += 10;
+        this.scoreText.setText(`Score: ${score}`);
+      }
+
+      function startGame() {
+        startButton.disableInteractive();
+        startButton.setVisible(false);
+        gameOver = false;
+        score = 0;
+        lives = 3;
+        this.scoreText.setText(`Score: ${score}`);
+        this.livesText.setText(`Lives: ${lives}`);
+      }
+    </script>
+  </body>
+</html>
