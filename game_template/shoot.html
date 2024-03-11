@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
       body {
@@ -9,6 +10,7 @@
       }
       #game-container {
         position: relative;
+        touch-action: none; /* 터치 스크롤 방지 */
       }
       #control-buttons {
         position: absolute;
@@ -46,7 +48,6 @@
       <button class="control-button" id="left-button">&#8676;</button>
       <button class="control-button" id="right-button">&#8677;</button>
     </div>
-    <button id="fire-button">&#10032;</button>
 
     <script>
       const config = {
@@ -77,6 +78,8 @@
       let lives = 3;
       let gameOver = false;
       let startButton;
+      let isMovingLeft = false;
+      let isMovingRight = false;
 
       function preload() {
         this.load.image('background', 'https://labs.phaser.io/assets/skies/space3.png');
@@ -124,24 +127,33 @@
         const fireButton = document.getElementById('fire-button');
 
         leftButton.addEventListener('touchstart', () => {
-          player.setVelocityX(-600);
+          isMovingLeft = true;
         });
         leftButton.addEventListener('touchend', () => {
-          player.setVelocityX(0);
+          isMovingLeft = false;
         });
 
         rightButton.addEventListener('touchstart', () => {
-          player.setVelocityX(600);
+          isMovingRight = true;
         });
         rightButton.addEventListener('touchend', () => {
-          player.setVelocityX(0);
+          isMovingRight = false;
         });
 
-        fireButton.addEventListener('touchstart', shootBullet);
-      }
+  }
 
       function update(time) {
         if (!gameOver) {
+          // 플레이어 움직임 처리
+shootBullet() ;
+          if (isMovingLeft) {
+            player.setVelocityX(-600);
+          } else if (isMovingRight) {
+            player.setVelocityX(600);
+          } else {
+            player.setVelocityX(0);
+          }
+
           // 적 생성
           if (time > lastEnemySpawnTime + 1000) {
             const enemy = enemies.get();
@@ -201,9 +213,12 @@
           });
         }
       }
-
+var cnt=0;
       function shootBullet() {
-        if (!gameOver) {
+  cnt+=1
+        if (!gameOver && cnt%10==0) { 
+         
+		
           const bullet = bullets.get();
           if (!bullet) return;
 
