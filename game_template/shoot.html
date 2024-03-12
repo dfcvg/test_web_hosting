@@ -45,6 +45,30 @@
         border-radius: 25px;
         font-size: 24px;
       }
+      #bomb-button {
+        position: absolute;
+        bottom: 70px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border: none;
+        outline: none;
+        border-radius: 25px;
+        font-size: 24px;
+      }
+    #full-button {
+        position: absolute;
+        bottom: 150px;
+        right: 10px;
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border: none;
+        outline: none;
+        border-radius: 25px;
+        font-size: 24px;
+      }
     </style>
   </head>
   <body>
@@ -53,7 +77,8 @@
       <button class="control-button" id="left-button" ontouchstart="preventLongPress(event);">&#8676;</button>
       <button class="control-button" id="right-button" ontouchstart="preventLongPress(event);">&#8677;</button>
     </div>
-
+    <button id="bomb-button">💣</button>
+<button id="full-button">FULL POW</button>
     <script>
       const config = {
         type: Phaser.AUTO,
@@ -73,7 +98,7 @@
       };
 
       const game = new Phaser.Game(config);
-
+      let shootFrequency = 10;
       let player;
       let enemies;
       let enemies2;
@@ -81,12 +106,12 @@
       let enemyBullets;
       let lastEnemySpawnTime = 0;
       let score = 0;
-      let lives = 3;
+      let lives = 10;
       let gameOver = true;
       let startButton;
       let isMovingLeft = false;
       let isMovingRight = false;
-
+      let explosionEmitter;
       function preload() {
         this.load.image('background', 'https://labs.phaser.io/assets/skies/space3.png');
         this.load.image('player', 'https://labs.phaser.io/assets/sprites/ship.png');
@@ -97,6 +122,7 @@
 
       function create() {
        
+
         this.add.image(config.width / 2, config.height / 2, 'background');
 
         player = this.physics.add.sprite(config.width / 2, config.height - 100, 'player');
@@ -131,7 +157,8 @@
         const leftButton = document.getElementById('left-button');
         const rightButton = document.getElementById('right-button');
         const fireButton = document.getElementById('fire-button');
-
+        const bombButton = document.getElementById('bomb-button');
+        const fullButton = document.getElementById('full-button');
         leftButton.addEventListener('touchstart', () => {
           isMovingLeft = true;
         });
@@ -145,15 +172,15 @@
         rightButton.addEventListener('touchend', () => {
           isMovingRight = false;
         });
-
- this.explosionEmitter = this.add.particles('explosion').createEmitter({
+       explosionEmitter = this.add.particles('explosion').createEmitter({
           speed: 100,
           scale: { start: 1, end: 0 },
           blendMode: 'ADD',
           lifespan: 2000,
           on: false,
         });
-
+        bombButton.addEventListener('click', dropBomb);
+       fullButton.addEventListener('click', function(){shootFrequency =3});
       }
 
       function preventLongPress(event) {
@@ -174,24 +201,9 @@
         }
 
         if (time > lastEnemySpawnTime + 1000) {
-          const enemy = enemies.get();
-          if (!enemy) return;
-
-          enemy.setActive(true);
-          enemy.setVisible(true);
-          enemy.setAngle(180);
-          enemy.setPosition(Phaser.Math.Between(50, config.width - 50), 0);
-          enemy.setVelocityY(Phaser.Math.Between(100, 300));
-
-          const enemy2 = enemies2.get();
-          if (!enemy2) return;
-
-          enemy2.setActive(true);
-          enemy2.setVisible(true);
-          enemy2.setAngle(180);
-          enemy2.setScale(2);
-          enemy2.setPosition(Phaser.Math.Between(50, config.width - 50), 0);
-          enemy2.setVelocityY(Phaser.Math.Between(100, 300));
+          if (enemies.getLength() === 0 && enemies2.getLength() === 0) {
+            spawnEnemies();
+          }
 
           shootEnemyBullet();
           lastEnemySpawnTime = time;
@@ -201,7 +213,7 @@
         this.physics.overlap(bullets, enemies2, hitEnemy2, null, this);
         this.physics.overlap(player, enemyBullets, hitPlayer, null, this);
 
-        bullets.children.iterate((bullet) => {
+        bullets.children.iterate(bullet => {
           if (bullet.y < 0) {
             bullets.killAndHide(bullet);
           } else {
@@ -210,22 +222,43 @@
           }
         });
 
-        enemies.children.iterate((enemy) => {
-if (enemy)
-          if (enemy.y > config.height) {
-            enemies.killAndHide(enemy);
-            enemies.remove(enemy, true, true);
-            if (lives > 0) {
-              lives--;
-              this.livesText.setText(`Lives: ${lives}`);
-              if (lives === 0) {
-                gameOver = true;
-                this.add.text(config.width / 2, config.height / 2, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+        enemies.children.iterate(enemy => {
+          if (enemy) {
+            if (enemy.y > config.height) {
+              enemies.killAndHide(enemy);
+              enemies.remove(enemy, true, true);
+              if (lives > 0) {
+                lives--;
+                this.livesText.setText(`Lives: ${lives}`);
+                if (lives === 0) {
+                  gameOver = true;
+                  this.add.text(config.width / 2, config.height / 2, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+                }
               }
+            } else {
+              enemy.setActive(true);
+              enemy.setVisible(true);
             }
-          } else {
-            enemy.setActive(true);
-            enemy.setVisible(true);
+          }
+        });
+
+        enemies2.children.iterate(enemy => {
+          if (enemy) {
+            if (enemy.y > config.height) {
+              enemies2.killAndHide(enemy);
+              enemies2.remove(enemy, true, true);
+              if (lives > 0) {
+                lives--;
+                this.livesText.setText(`Lives: ${lives}`);
+                if (lives === 0) {
+                  gameOver = true;
+                  this.add.text(config.width / 2, config.height / 2, 'Game Over', { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+                }
+              }
+            } else {
+              enemy.setActive(true);
+              enemy.setVisible(true);
+            }
           }
         });
       }
@@ -233,7 +266,7 @@ if (enemy)
       var cnt = 0;
       function shootBullet() {
         cnt += 1;
-        if (!gameOver && cnt % 10 === 0) {
+        if (!gameOver && cnt % shootFrequency  === 0) {
           const bullet = bullets.get();
           if (!bullet) return;
 
@@ -245,26 +278,25 @@ if (enemy)
         }
       }
 
-      
- function shootEnemyBullet() {
-  const activeEnemies = enemies.getChildren().concat(enemies2.getChildren()).filter(e => e.active);
-  if (activeEnemies.length === 0) return;
+      function shootEnemyBullet() {
+        const activeEnemies = enemies.getChildren().concat(enemies2.getChildren()).filter(e => e.active);
+        if (activeEnemies.length === 0) return;
 
-  const enemy = Phaser.Utils.Array.RemoveRandomElement(activeEnemies);
-  activeEnemies.push(enemy); // 다시 배열에 추가
+        const enemy = Phaser.Utils.Array.RemoveRandomElement(activeEnemies);
+        activeEnemies.push(enemy);
 
-  const bullet = enemyBullets.get();
-  if (!bullet) return;
+        const bullet = enemyBullets.get();
+        if (!bullet) return;
 
-  bullet.setActive(true);
-  bullet.setVisible(true);
-  bullet.setAngle(-90);
-  bullet.setPosition(enemy.x, enemy.y);
-  bullet.setVelocityY(300);
-}
+        bullet.setActive(true);
+        bullet.setVisible(true);
+        bullet.setAngle(-90);
+        bullet.setPosition(enemy.x, enemy.y);
+        bullet.setVelocityY(300);
+      }
 
       function hitEnemy(bullet, enemy) {
-        this.explosionEmitter.explode(200, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+        explosionEmitter.explode(200, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
         bullets.remove(bullet, true, true);
         enemies.remove(enemy, true, true);
         score += 10;
@@ -272,7 +304,7 @@ if (enemy)
       }
 
       function hitEnemy2(bullet, enemy) {
-        this.explosionEmitter.explode(200, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+        explosionEmitter.explode(200, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
         bullets.remove(bullet, true, true);
         enemies2.remove(enemy, true, true);
         score += 10;
@@ -291,12 +323,55 @@ if (enemy)
         }
       }
 
+      function dropBomb() {
+        enemies.children.iterate(enemy => {
+        if( enemy){
+          explosionEmitter.explode(200, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+          enemies.killAndHide(enemy);
+          enemies.remove(enemy, true, true);
+}
+        });
+
+        enemies2.children.iterate(enemy => {
+         if( enemy){
+          explosionEmitter.explode(200, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+          enemies2.killAndHide(enemy);
+          enemies2.remove(enemy, true, true);
+        }
+        });
+      }
+
+      function spawnEnemies() {
+        for (let i = 0; i < 5; i++) {
+          const enemy = enemies.get();
+          if (!enemy) continue;
+
+          enemy.setActive(true);
+          enemy.setVisible(true);
+          enemy.setAngle(180);
+          enemy.setPosition(Phaser.Math.Between(50, config.width - 50), 0);
+          enemy.setVelocityY(Phaser.Math.Between(100, 300));
+        }
+
+        for (let i = 0; i < 3; i++) {
+          const enemy = enemies2.get();
+          if (!enemy) continue;
+
+          enemy.setActive(true);
+          enemy.setVisible(true);
+          enemy.setAngle(180);
+          enemy.setScale(2);
+          enemy.setPosition(Phaser.Math.Between(50, config.width - 50), 0);
+          enemy.setVelocityY(Phaser.Math.Between(100, 300));
+        }
+      }
+
       function startGame() {
         startButton.disableInteractive();
         startButton.setVisible(false);
         gameOver = false;
         score = 0;
-        lives = 3;
+        lives = 10;
         this.scoreText.setText(`Score: ${score}`);
         this.livesText.setText(`Lives: ${lives}`);
       }
