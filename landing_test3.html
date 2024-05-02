@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, target-densityDpi=device-dpi"/>
+    <title>Banner</title>
+
+</head>
+<body topmargin="0" leftmargin="0" rightmargin="0",bottommargin="0" style="background-color:#ffffff;">
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+var subid = '';
+ window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (str, key, value) {
+    if (key == "subid") subid = value;
+});
+
+
+var scheme ='aliexpress://product/detail?productId={product_id}&fromPageCode=detail&m_page_id=&spm=a2g0n.detail.smartbanner.0&isAutoCall=true&spm-url=&abId=&bktId=&activityId=65159&invoke_method=href&callStrategy=isAutoCall&aff_trace_key={aff_trace_key}&aff_platform=msite&browser_id='
+var landing_url = 'https://s.click.aliexpress.com/e/' + subid  ;  
+
+function landing(scheme, url){
+	var visitedAt = (new Date()).getTime(); // 방문시간
+	setTimeout(function(){
+		if((new Date()).getTime() - visitedAt < 2000) {
+			location.href = url
+		}
+	}, 500);
+
+	location.href=scheme ;
+}
+
+
+
+$.ajax({
+    type:'GET',
+    url : "https://e7so7ahvv5kgomv5qyu3wral4y0gdmab.lambda-url.ap-northeast-2.on.aws/?url="+ landing_url ,
+    success: function(u){
+var parser = document.createElement('a');
+parser.href = u;
+itemId = parser.pathname.split("item/")[1].split(".")[0] ;
+var params = parser.search.split('?')[1].split('&');
+var param_map = {};
+for (var i = 0; i < params.length; i++) {
+  var parts = params[i].split('=');
+  param_map [parts[0]] = parts[1]
+}
+scheme =scheme.replace('{product_id}', itemId).replace('{aff_trace_key}', param_map['aff_trace_key'] )
+landing(scheme, landing_url)
+    },
+    error:function(){  
+      location.href = landing_url;
+    }
+});
+
+
+
+</script>
+
+</div>
+
+
+</div>
+</body>
+</html>
