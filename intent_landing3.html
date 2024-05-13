@@ -6,10 +6,10 @@
 <a  id='target_alink' href="">app link</a>
 <br /><br />
 <script>
-var link = '';
-alert(window.location.search)
+var link = window.location.search.replace('?link=','');
+
 var template_link='http://image.cauly.co.kr/cauly_landing/cauly_landing_v2.html?landing_type=2&site_url&scheme=googlechrome%3A%2F%2Fnavigate%3Furl%3D'
 document.getElementById('target_alink').href = template_link+encodeURIComponent(link)
-
+alert( template_link+encodeURIComponent(link))
   
 </script>
