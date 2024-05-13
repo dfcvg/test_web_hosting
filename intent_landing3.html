@@ -1,10 +1,17 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, target-densityDpi=device-dpi"/>
 
-<a href="http://image.cauly.co.kr/cauly_landing/cauly_landing_v2.html?landing_type=2&site_url&scheme=googlechrome%3A%2F%2Fnavigate%3Furl%3Dbestmore.net%2Fclick.php%3Fm%3Dctrip%26a%3DA100684398%26l%3D0000"> iherb app link</a>
-<br /><br />
 
-<a href="http://image.cauly.co.kr/cauly_landing/cauly_landing_v2.html?landing_type=2&site_url&scheme=googlechrome%3A%2F%2Fnavigate%3Furl%3Dnewtip.net%2Fclick.php%3Fm%3Dclubclio%26a%3DA100684398%26l%3D0000">클리오 app link</a>
+
+<a  id='target_alink' href="">app link</a>
 <br /><br />
-<a href="intent://newtip.net/click.php?m=clubclio&a=A100684398&l=0000;scheme=https;package=witplus.clio.starter;end"> 클리오 app link</a>
-<br /><br />
+<script>
+var link = '';
+ window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (str, key, value) {
+    if (key == "link") link = value;
+});
+var template_link='http://image.cauly.co.kr/cauly_landing/cauly_landing_v2.html?landing_type=2&site_url&scheme=googlechrome%3A%2F%2Fnavigate%3Furl%3D'
+document.getElementById('target_alink').href = template_link+encodeURIComponent(link)
+
+  
+</script>
