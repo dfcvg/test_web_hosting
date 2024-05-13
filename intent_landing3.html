@@ -7,9 +7,7 @@
 <br /><br />
 <script>
 var link = '';
- window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (str, key, value) {
-    if (key == "link") link = value;
-});
+alert(window.location.search)
 var template_link='http://image.cauly.co.kr/cauly_landing/cauly_landing_v2.html?landing_type=2&site_url&scheme=googlechrome%3A%2F%2Fnavigate%3Furl%3D'
 document.getElementById('target_alink').href = template_link+encodeURIComponent(link)
 
