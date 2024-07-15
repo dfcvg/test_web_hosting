@@ -18,7 +18,7 @@ function getParam(sname) {
     }
     return sval;
 }
-document.getElementById('test_embed').src='https://www.youtube.com/v/{}?autoplay=1&mute=1'.replace('{}',getParam('vid'))
+document.getElementById('test_embed').src='https://www.youtube.com/v/{}'.replace('{}',getParam('vid'))
 </script>
 
 </body>
