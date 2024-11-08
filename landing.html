@@ -17,19 +17,8 @@
   <script>
     function redirectToLanding() {
       const urlInput = document.getElementById('urlInput').value;
-      
-      // 입력된 URL이 http/https로 시작하지 않으면 추가
-      const validUrl = urlInput.startsWith('http://') || urlInput.startsWith('https://') 
-        ? urlInput 
-        : 'http://' + urlInput;
-      
-      // URL 유효성 검사
-      try {
-        new URL(validUrl); // 유효성 검사에 실패하면 예외 발생
         window.location.href = validUrl; // 입력된 URL로 이동
-      } catch (e) {
-        alert('유효한 URL을 입력하세요.');
-      }
+     
     }
   </script>
 </body>
