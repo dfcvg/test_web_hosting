@@ -19,6 +19,44 @@
 		function move() {
 			location.href = 'https://www.daum.net';
 		}
+		function ua(){
+			document.getElementById('reslut').innerHTML = navigator.userAgent
+		}
+		 async function showUAHints() {
+      const outputElement = document.getElementById("output");
+
+      if (!navigator.userAgentData) {
+        outputElement.textContent = "❌ navigator.userAgentData를 지원하지 않습니다.";
+        return;
+      }
+
+      try {
+        const lowEntropy = {
+          brands: navigator.userAgentData.brands,
+          mobile: navigator.userAgentData.mobile
+        };
+
+        const highEntropy = await navigator.userAgentData.getHighEntropyValues([
+          "architecture",
+          "model",
+          "platform",
+          "platformVersion",
+          "bitness",
+          "uaFullVersion",
+          "fullVersionList",
+          "wow64"
+        ]);
+
+        const combined = {
+          ...lowEntropy,
+          ...highEntropy
+        };
+
+        outputElement.textContent = JSON.stringify(combined, null, 2);
+      } catch (error) {
+        outputElement.textContent = `⚠️ 오류 발생: ${error}`;
+      }
+    }
 	</script>
 </head>
 <body>
@@ -27,5 +65,9 @@
 	<button onclick="getSdkInfo()">getSdkInfo 버튼</button><br />
 	<button onclick="openWindow()">openWindow 새창 구글 버튼</button><br />
 	<button onclick="move()">다음 페이지  현재창 버튼</button><br />
+	<button onclick="ua()">User Agent</button><br />
+	<button onclick="showUAHints()">SUA</button><br />
+	
+	<div id='result'></div>
 </body>
 </html>
