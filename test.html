@@ -20,7 +20,7 @@
 			location.href = 'https://www.daum.net';
 		}
 		function ua(){
-			document.getElementById('reslut').innerHTML = navigator.userAgent
+			document.getElementById('output').innerHTML = navigator.userAgent
 		}
 		 async function showUAHints() {
       const outputElement = document.getElementById("output");
@@ -68,6 +68,6 @@
 	<button onclick="ua()">User Agent</button><br />
 	<button onclick="showUAHints()">SUA</button><br />
 	
-	<div id='result'></div>
+	<div id='output'></div>
 </body>
 </html>
