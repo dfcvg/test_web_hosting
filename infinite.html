@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>무한의 계단</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body, button, h1, h2, p {
+            font-family: 'Jua', sans-serif;
+        }
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .game-wrapper {
+            width: 100%;
+            max-width: 420px;
+            aspect-ratio: 9 / 16;
+            max-height: 85vh;
+        }
+        canvas {
+            background: linear-gradient(to bottom, #87CEEB 0%, #ADD8E6 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-800 flex flex-col items-center justify-center min-h-screen text-white p-4 overflow-hidden">
+
+    <div class="w-full max-w-md text-center mb-4">
+        <h1 class="text-4xl font-bold text-yellow-300">무한의 계단</h1>
+        <p class="text-2xl mt-2">점수: <span id="score" class="font-bold">0</span></p>
+    </div>
+
+    <div class="game-wrapper relative bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border-4 border-gray-600">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="startScreen" class="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center p-4 text-center z-20">
+            <h2 class="text-5xl font-extrabold text-white mb-6">도전! 무한의 계단</h2>
+            <p class="text-xl mb-8">시간 안에 계단을 오르세요!</p>
+            <button id="startButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold transition-transform transform hover:scale-105 shadow-lg">시작하기</button>
+        </div>
+
+        <div id="gameOverScreen" class="absolute inset-0 bg-black bg-opacity-70 flex-col items-center justify-center hidden p-4 text-center z-20">
+            <h2 class="text-6xl font-extrabold text-red-500 mb-4">게임 오버!</h2>
+            <p class="text-2xl mb-2">최종 점수: <span id="finalScore" class="text-yellow-300">0</span></p>
+            <p class="text-xl mb-6">최고 기록: <span id="highScore" class="text-green-400">0</span></p>
+            <button id="restartButton" class="mt-4 px-10 py-4 bg-green-500 hover:bg-green-600 rounded-full text-2xl font-bold transition-transform transform hover:scale-105 shadow-lg">다시 도전</button>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 z-10 p-6">
+            <div class="flex justify-between w-full">
+                <button id="changeAndGoButton" class="w-2/5 py-5 bg-blue-500 bg-opacity-80 text-white font-bold text-xl rounded-2xl shadow-xl transform active:scale-95 transition-transform duration-100">방향전환 & 전진</button>
+                <button id="goStraightButton" class="w-2/5 py-5 bg-green-500 bg-opacity-80 text-white font-bold text-xl rounded-2xl shadow-xl transform active:scale-95 transition-transform duration-100">직진</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('finalScore');
+        const highScoreEl = document.getElementById('highScore');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        
+        const changeAndGoButton = document.getElementById('changeAndGoButton');
+        const goStraightButton = document.getElementById('goStraightButton');
+
+        let player, stairs, score, highScore, gameState, animationFrameId;
+        let cameraY, targetCameraY;
+        
+        // 새로운 변수들
+        let timer, maxTimer, lastTime;
+
+        const STAIR_HEIGHT = 20;
+        const STAIR_WIDTH = 100;
+        const STAIR_STEP_Y = 80;
+        const STAIR_STEP_X = 60;
+        const GAUGE_HEIGHT = 10;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        function loadHighScore() {
+            highScore = localStorage.getItem('infiniteStairsHighScore') || 0;
+            highScoreEl.textContent = highScore;
+        }
+
+        function saveHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('infiniteStairsHighScore', highScore);
+                highScoreEl.textContent = highScore;
+            }
+        }
+        
+        function generateNewStair() {
+            const lastStair = stairs[stairs.length - 1];
+            let newDirection = Math.random() < 0.5 ? 'left' : 'right';
+            
+            const nextX_right = lastStair.x + STAIR_STEP_X;
+            const nextX_left = lastStair.x - STAIR_STEP_X;
+
+            if (nextX_right + STAIR_WIDTH > canvas.width - 20) newDirection = 'left';
+            else if (nextX_left < 20) newDirection = 'right';
+
+            const newX = newDirection === 'left' ? nextX_left : nextX_right;
+
+            stairs.push({ x: newX, y: lastStair.y - STAIR_STEP_Y, direction: newDirection });
+        }
+
+        function init() {
+            score = 0;
+            gameState = 'playing';
+            scoreEl.textContent = score;
+            cameraY = 0;
+            targetCameraY = 0;
+            lastTime = 0;
+
+            maxTimer = 5000; // 5초
+            timer = maxTimer;
+
+            stairs = [];
+            const initialStair = { x: canvas.width / 2 - STAIR_WIDTH / 2, y: canvas.height - 80, direction: 'right' };
+            stairs.push(initialStair);
+            
+            player = {
+                x: initialStair.x + STAIR_WIDTH / 2,
+                y: initialStair.y,
+                direction: 'right',
+                currentStairIndex: 0,
+                velocityY: 0,
+                rotation: 0
+            };
+
+            for (let i = 0; i < 15; i++) generateNewStair();
+
+            gameOverScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('flex');
+            startScreen.classList.add('hidden');
+            startScreen.classList.remove('flex');
+        }
+        
+        function drawPlayerCharacter() {
+            const pX = player.x;
+            const pY = player.y;
+            const headSize = 12;
+            const bodyHeight = 20;
+            const bodyWidth = 15;
+            const legHeight = 15;
+            const legWidth = 5;
+            
+            ctx.save();
+            ctx.translate(pX, pY);
+            ctx.rotate(player.rotation); // 회전 적용
+
+            ctx.fillStyle = '#4682B4';
+            ctx.fillRect(-legWidth - 2, -legHeight, legWidth, legHeight);
+            ctx.fillRect(2, -legHeight, legWidth, legHeight);
+
+            ctx.fillStyle = '#ff6347';
+            ctx.fillRect(-bodyWidth / 2, -legHeight - bodyHeight, bodyWidth, bodyHeight);
+
+            ctx.fillStyle = '#F5DEB3';
+            ctx.beginPath();
+            ctx.arc(0, -legHeight - bodyHeight - headSize, headSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'black';
+            const eyeOffsetX = player.direction === 'right' ? 4 : -4;
+            ctx.beginPath();
+            ctx.arc(eyeOffsetX, -legHeight - bodyHeight - headSize, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawStairs() {
+            stairs.forEach((stair, index) => {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(stair.x, stair.y, STAIR_WIDTH, STAIR_HEIGHT);
+                ctx.fillStyle = '#A0522D';
+                ctx.fillRect(stair.x, stair.y + STAIR_HEIGHT, STAIR_WIDTH, 5);
+
+                if (gameState === 'playing' && index === player.currentStairIndex + 1) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.font = 'bold 24px Jua';
+                    ctx.textAlign = 'center';
+                    const text = stair.direction === 'left' ? '◀' : '▶';
+                    ctx.fillText(text, stair.x + STAIR_WIDTH / 2, stair.y - 10);
+                }
+            });
+        }
+
+        function drawGauge() {
+            const percentage = Math.max(0, timer / maxTimer);
+            const gaugeWidth = canvas.width * percentage;
+            
+            // 게이지 색상 변경 (시간이 없을수록 빨갛게)
+            if (percentage < 0.25) {
+                ctx.fillStyle = '#FF4136'; // Red
+            } else if (percentage < 0.5) {
+                ctx.fillStyle = '#FFDC00'; // Yellow
+            } else {
+                ctx.fillStyle = '#2ECC40'; // Green
+            }
+            
+            ctx.fillRect(0, 0, gaugeWidth, GAUGE_HEIGHT);
+        }
+
+        function gameLoop(currentTime) {
+            animationFrameId = requestAnimationFrame(gameLoop);
+
+            if (!lastTime) lastTime = currentTime;
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState === 'playing') {
+                timer -= deltaTime;
+                if (timer <= 0) {
+                    endGame();
+                    return;
+                }
+            }
+            
+            cameraY += (targetCameraY - cameraY) * 0.1;
+            
+            ctx.save();
+            ctx.translate(0, cameraY);
+            
+            drawStairs();
+            
+            if (gameState === 'dying') {
+                player.y += player.velocityY;
+                player.velocityY += 0.4; // Gravity
+                player.rotation += 0.1;
+                
+                // 화면 밖으로 나가면 게임 오버 화면 표시
+                const playerAbsoluteY = player.y - cameraY;
+                if(playerAbsoluteY > canvas.height + 50) {
+                    cancelAnimationFrame(animationFrameId);
+                    showGameOverScreen();
+                }
+            }
+            
+            drawPlayerCharacter();
+            
+            ctx.restore();
+
+            // 게이지는 카메라에 영향받지 않도록 마지막에 그림
+            if (gameState === 'playing') {
+                drawGauge();
+            }
+        }
+        
+        function performMove(intendedDirection) {
+            if (gameState !== 'playing') return;
+            
+            const nextStair = stairs[player.currentStairIndex + 1];
+            if (!nextStair) return;
+
+            if (intendedDirection === nextStair.direction) {
+                score++;
+                scoreEl.textContent = score;
+
+                // 타이머 리셋 및 난이도 조절
+                maxTimer = Math.max(1200, 4000 - score * 35); // 최소 1.2초, 점수당 시간 감소
+                timer = maxTimer;
+
+                player.currentStairIndex++;
+                player.direction = intendedDirection;
+                
+                const newPlayerStair = stairs[player.currentStairIndex];
+                player.x = newPlayerStair.x + STAIR_WIDTH / 2;
+                player.y = newPlayerStair.y;
+                
+                targetCameraY += STAIR_STEP_Y;
+
+                generateNewStair();
+
+            } else {
+                endGame();
+            }
+        }
+
+        function handleChangeAndGo() {
+            const newDirection = player.direction === 'left' ? 'right' : 'left';
+            performMove(newDirection);
+        }
+
+        function handleGoStraight() {
+            performMove(player.direction);
+        }
+
+        function endGame() {
+            if (gameState !== 'playing') return; // 중복 실행 방지
+            gameState = 'dying';
+            player.velocityY = -8; // 위로 살짝 튀어오르는 효과
+        }
+        
+        function showGameOverScreen() {
+            saveHighScore();
+            finalScoreEl.textContent = score;
+            gameOverScreen.classList.remove('hidden');
+            gameOverScreen.classList.add('flex');
+        }
+
+        function startGame() {
+            resizeCanvas();
+            init();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        changeAndGoButton.addEventListener('click', handleChangeAndGo);
+        goStraightButton.addEventListener('click', handleGoStraight);
+
+        window.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+            if (e.key === 'ArrowLeft') handleChangeAndGo();
+            else if (e.key === 'ArrowRight') handleGoStraight();
+        });
+
+        resizeCanvas();
+        loadHighScore();
+        startScreen.classList.add('flex');
+        startScreen.classList.remove('hidden');
+    </script>
+</body>
+</html>
