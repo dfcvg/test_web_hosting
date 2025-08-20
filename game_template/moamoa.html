@@ -21,57 +21,48 @@
             background-color: #1a202c;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         canvas {
             background-color: #000;
             display: block;
-            flex-grow: 1;
         }
-        .back-button {
-            position: absolute;
-            top: 1rem;
-            left: 1rem;
-            z-index: 10;
-        }
-        .score-display {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            z-index: 10;
-            font-size: 1.5rem;
-            color: white;
-        }
-        .game-controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            padding: 1rem;
-            box-sizing: border-box;
-            z-index: 10;
-        }
-        .control-btn {
-            background-color: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            color: white;
-            font-size: 1.2rem; /* 폰트 크기 조절 */
-            border-radius: 0.5rem;
-            padding: 1rem;
-            user-select: none;
-        }
+        .back-button { position: absolute; top: 1rem; left: 1rem; z-index: 50; }
+        .score-display { position: absolute; top: 1rem; right: 1rem; z-index: 50; font-size: 1.5rem; color: white; }
+        .game-controls { position: absolute; bottom: 0; left: 0; width: 100%; padding: 1rem; box-sizing: border-box; z-index: 50; }
+        .control-btn { background-color: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); color: white; font-size: 1.2rem; border-radius: 0.5rem; padding: 1rem; user-select: none; }
+        
+        /* 카드 뒤집기 스타일 */
+        #memory-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .memory-card { width: 100%; aspect-ratio: 1 / 1; background-color: #4a5568; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; cursor: pointer; transform-style: preserve-3d; transition: transform 0.5s; }
+        .memory-card .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
+        .memory-card .card-back { transform: rotateY(180deg); }
+        .memory-card.is-flipped { transform: rotateY(180deg); }
+        .memory-card.is-matched { background-color: #2d3748; opacity: 0.5; }
+
+        /* 2048 스타일 */
+        #game-2048-board { display: grid; grid-template-columns: repeat(4, 1fr); grid-gap: 10px; padding: 10px; background-color: #bbada0; border-radius: 6px; }
+        .tile-2048 { display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; border-radius: 3px; transition: all 0.1s ease-in-out; }
+        .tile-2048[data-value="2"] { background-color: #eee4da; color: #776e65; } .tile-2048[data-value="4"] { background-color: #ede0c8; color: #776e65; } .tile-2048[data-value="8"] { background-color: #f2b179; color: #f9f6f2; } .tile-2048[data-value="16"] { background-color: #f59563; color: #f9f6f2; } .tile-2048[data-value="32"] { background-color: #f67c5f; color: #f9f6f2; } .tile-2048[data-value="64"] { background-color: #f65e3b; color: #f9f6f2; } .tile-2048[data-value="128"] { background-color: #edcf72; color: #f9f6f2; } .tile-2048[data-value="256"] { background-color: #edcc61; color: #f9f6f2; } .tile-2048[data-value="512"] { background-color: #edc850; color: #f9f6f2; } .tile-2048[data-value="1024"] { background-color: #edc53f; color: #f9f6f2; } .tile-2048[data-value="2048"] { background-color: #edc22e; color: #f9f6f2; }
     </style>
 </head>
 <body class="bg-gray-900 text-white m-0 p-0 overflow-hidden w-screen h-screen">
 
     <!-- 로비 화면 -->
-    <div id="lobby-screen" class="w-full h-full flex flex-col items-center justify-center p-4">
-        <h1 class="text-5xl font-bold text-yellow-300 mb-8">미니 게임 천국</h1>
-        <div class="grid grid-cols-2 gap-4 w-full max-w-md">
+    <div id="lobby-screen" class="w-full h-full flex flex-col items-center p-4 overflow-y-auto">
+        <h1 class="text-5xl font-bold text-yellow-300 my-8">미니 게임 천국</h1>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full max-w-lg">
             <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="brick-breaker"><div class="text-6xl mb-2">🧱</div><h2 class="text-xl font-semibold">벽돌깨기</h2></div>
             <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="snake"><div class="text-6xl mb-2">🐍</div><h2 class="text-xl font-semibold">지렁이 게임</h2></div>
             <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="runner"><div class="text-6xl mb-2">🏃</div><h2 class="text-xl font-semibold">러닝 게임</h2></div>
             <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="avoid"><div class="text-6xl mb-2">✈️</div><h2 class="text-xl font-semibold">별 피하기</h2></div>
             <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="stairs"><div class="text-6xl mb-2">🪜</div><h2 class="text-xl font-semibold">계단 오르기</h2></div>
+            <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="2048"><div class="text-6xl mb-2">🔢</div><h2 class="text-xl font-semibold">2048</h2></div>
+            <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="flappy-bird"><div class="text-6xl mb-2">🐦</div><h2 class="text-xl font-semibold">플래피 버드</h2></div>
+            <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="whack-a-mole"><div class="text-6xl mb-2">🔨</div><h2 class="text-xl font-semibold">두더지 잡기</h2></div>
+            <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="memory"><div class="text-6xl mb-2">🃏</div><h2 class="text-xl font-semibold">카드 뒤집기</h2></div>
+            <div class="game-card bg-gray-800 p-4 rounded-lg text-center transform hover:scale-105 transition-transform cursor-pointer" data-game="jump"><div class="text-6xl mb-2">⬆️</div><h2 class="text-xl font-semibold">점프 게임</h2></div>
         </div>
     </div>
 
@@ -90,6 +81,19 @@
                 <button id="stairs-go-straight" class="control-btn w-1/2 ml-1">직진</button>
             </div>
         </div>
+        <div id="2048-screen" class="game-screen justify-center items-center p-4">
+            <button class="back-button bg-red-500 px-4 py-2 rounded">← 로비로</button>
+            <div class="score-display">점수: <span id="2048-score">0</span></div>
+            <div id="game-2048-board" class="w-full max-w-md aspect-square"></div>
+        </div>
+        <div id="flappy-bird-screen" class="game-screen hidden"><button class="back-button bg-red-500 px-4 py-2 rounded">← 로비로</button><div class="score-display">점수: <span id="flappy-score">0</span></div><canvas id="flappy-bird-canvas"></canvas></div>
+        <div id="whack-a-mole-screen" class="game-screen hidden"><button class="back-button bg-red-500 px-4 py-2 rounded">← 로비로</button><div class="score-display">점수: <span id="whack-score">0</span> | 시간: <span id="whack-time">30</span></div><canvas id="whack-a-mole-canvas"></canvas></div>
+        <div id="memory-screen" class="game-screen justify-center items-center p-4">
+            <button class="back-button bg-red-500 px-4 py-2 rounded">← 로비로</button>
+            <div class="score-display">시도: <span id="memory-tries">0</span></div>
+            <div id="memory-board" class="w-full max-w-md aspect-square"></div>
+        </div>
+        <div id="jump-screen" class="game-screen hidden"><button class="back-button bg-red-500 px-4 py-2 rounded">← 로비로</button><div class="score-display">높이: <span id="jump-score">0</span></div><canvas id="jump-canvas"></canvas></div>
     </div>
 
 <script>
@@ -125,8 +129,35 @@ function showScreen(screenId) {
     }
 }
 
-// --- 벽돌깨기 게임 ---
-const brickBreakerGame = (() => {
+// --- 게임 객체들 ---
+const brickBreakerGame = {}; const snakeGame = {}; const runnerGame = {}; const avoidGame = {}; const stairsGame = {}; const game2048 = {}; const flappyBirdGame = {}; const whackAMoleGame = {}; const memoryGame = {}; const jumpGame = {};
+
+// --- 게임 카드 클릭 이벤트 핸들러 ---
+gameCards.forEach(card => {
+    card.addEventListener('click', () => {
+        const gameId = card.dataset.game;
+        if (!gameId) return;
+        
+        const gameMap = {
+            'brick-breaker': brickBreakerGame, 'snake': snakeGame, 'runner': runnerGame,
+            'avoid': avoidGame, 'stairs': stairsGame, '2048': game2048,
+            'flappy-bird': flappyBirdGame, 'whack-a-mole': whackAMoleGame,
+            'memory': memoryGame, 'jump': jumpGame
+        };
+        activeGame = gameMap[gameId];
+        if (activeGame && activeGame.start) {
+            showScreen(`${gameId}-screen`);
+            activeGame.start();
+        }
+    });
+});
+
+backButtons.forEach(button => button.addEventListener('click', () => showScreen('lobby-screen')));
+
+// --- 각 게임 로직 구현 ---
+
+// Brick Breaker
+Object.assign(brickBreakerGame, (() => {
     const canvas = document.getElementById('brick-breaker-canvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('bb-score');
@@ -249,10 +280,10 @@ const brickBreakerGame = (() => {
     }
 
     return { start, stop };
-})();
+})());
 
-// --- 지렁이 게임 ---
-const snakeGame = (() => {
+// Snake
+Object.assign(snakeGame, (() => {
     const canvas = document.getElementById('snake-canvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('snake-score');
@@ -372,10 +403,10 @@ const snakeGame = (() => {
     }
 
     return { start, stop };
-})();
+})());
 
-// --- 러닝 게임 ---
-const runnerGame = (() => {
+// Runner
+Object.assign(runnerGame, (() => {
     const canvas = document.getElementById('runner-canvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('runner-score');
@@ -468,10 +499,10 @@ const runnerGame = (() => {
     }
 
     return { start, stop };
-})();
+})());
 
-// --- 별 피하기 게임 (수정됨) ---
-const avoidGame = (() => {
+// Avoid
+Object.assign(avoidGame, (() => {
     const canvas = document.getElementById('avoid-canvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('avoid-score');
@@ -527,14 +558,13 @@ const avoidGame = (() => {
         scoreEl.textContent = Math.floor(score / 10);
         gameSpeed += 0.002;
 
-        // 별 생성
         if (Math.random() < 0.1) {
             let x, y;
             const edge = Math.floor(Math.random() * 4);
-            if (edge === 0) { x = Math.random() * canvas.width; y = 0; } // Top
-            else if (edge === 1) { x = canvas.width; y = Math.random() * canvas.height; } // Right
-            else if (edge === 2) { x = Math.random() * canvas.width; y = canvas.height; } // Bottom
-            else { x = 0; y = Math.random() * canvas.height; } // Left
+            if (edge === 0) { x = Math.random() * canvas.width; y = 0; }
+            else if (edge === 1) { x = canvas.width; y = Math.random() * canvas.height; }
+            else if (edge === 2) { x = Math.random() * canvas.width; y = canvas.height; }
+            else { x = 0; y = Math.random() * canvas.height; }
 
             const angle = Math.atan2(player.y - y, player.x - x);
             stars.push({
@@ -545,7 +575,6 @@ const avoidGame = (() => {
             });
         }
 
-        // 별 이동 및 충돌 감지
         stars.forEach((star, index) => {
             star.x += star.dx;
             star.y += star.dy;
@@ -589,10 +618,10 @@ const avoidGame = (() => {
     }
 
     return { start, stop };
-})();
+})());
 
-// --- 계단 오르기 ---
-const stairsGame = (() => {
+// Stairs
+Object.assign(stairsGame, (() => {
     const canvas = document.getElementById('stairs-canvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('stairs-score');
@@ -712,28 +741,566 @@ const stairsGame = (() => {
     }
     
     return { start, stop };
-})();
+})());
 
-// --- 게임 카드 클릭 이벤트 핸들러 ---
-gameCards.forEach(card => {
-    card.addEventListener('click', () => {
-        const gameId = card.dataset.game;
-        if (!gameId) return;
-        
-        const gameMap = {
-            'brick-breaker': brickBreakerGame,
-            'snake': snakeGame,
-            'runner': runnerGame,
-            'avoid': avoidGame,
-            'stairs': stairsGame,
-        };
-        activeGame = gameMap[gameId];
-        if (activeGame) {
-            showScreen(`${gameId}-screen`);
-            activeGame.start();
+// 2048
+Object.assign(game2048, (() => {
+    const boardEl = document.getElementById('game-2048-board');
+    const scoreEl = document.getElementById('2048-score');
+    let board = [];
+    let score = 0;
+    let touchStartX, touchStartY;
+
+    function init() {
+        board = Array.from({ length: 4 }, () => Array(4).fill(0));
+        score = 0;
+        addRandomTile();
+        addRandomTile();
+        drawBoard();
+    }
+
+    function drawBoard() {
+        boardEl.innerHTML = '';
+        scoreEl.textContent = score;
+        for (let y = 0; y < 4; y++) {
+            for (let x = 0; x < 4; x++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile-2048';
+                const value = board[y][x];
+                if (value > 0) {
+                    tile.textContent = value;
+                    tile.dataset.value = value;
+                }
+                boardEl.appendChild(tile);
+            }
         }
-    });
-});
+    }
+
+    function addRandomTile() {
+        let emptyTiles = [];
+        for (let y = 0; y < 4; y++) {
+            for (let x = 0; x < 4; x++) {
+                if (board[y][x] === 0) emptyTiles.push({ x, y });
+            }
+        }
+        if (emptyTiles.length > 0) {
+            const { x, y } = emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+            board[y][x] = Math.random() < 0.9 ? 2 : 4;
+        }
+    }
+    
+    function slide(row) {
+        let arr = row.filter(val => val);
+        let missing = 4 - arr.length;
+        let zeros = Array(missing).fill(0);
+        arr = zeros.concat(arr);
+        return arr;
+    }
+
+    function combine(row) {
+        for (let i = 3; i >= 1; i--) {
+            if (row[i] === row[i - 1]) {
+                row[i] *= 2;
+                score += row[i];
+                row[i - 1] = 0;
+            }
+        }
+        return row;
+    }
+
+    function operate(row) {
+        row = slide(row);
+        row = combine(row);
+        row = slide(row);
+        return row;
+    }
+
+    function rotateBoard(board) {
+        let newBoard = [];
+        for (let i = 0; i < 4; i++) {
+            newBoard.push([]);
+            for (let j = 0; j < 4; j++) {
+                newBoard[i].push(board[j][i]);
+            }
+        }
+        return newBoard;
+    }
+
+    function move(dir) {
+        let moved = false;
+        let originalBoard = JSON.stringify(board);
+
+        if (dir === 'left' || dir === 'right') {
+            for (let i = 0; i < 4; i++) {
+                let row = board[i];
+                if (dir === 'right') row.reverse();
+                row = operate(row);
+                if (dir === 'right') row.reverse();
+                board[i] = row;
+            }
+        } else if (dir === 'up' || dir === 'down') {
+            board = rotateBoard(board);
+            for (let i = 0; i < 4; i++) {
+                let row = board[i];
+                if (dir === 'down') row.reverse();
+                row = operate(row);
+                if (dir === 'down') row.reverse();
+                board[i] = row;
+            }
+            board = rotateBoard(board);
+        }
+
+        if (JSON.stringify(board) !== originalBoard) {
+            addRandomTile();
+        }
+        drawBoard();
+    }
+    
+    function handleKeyDown(e) {
+        if (e.key === 'ArrowUp') move('up');
+        else if (e.key === 'ArrowDown') move('down');
+        else if (e.key === 'ArrowLeft') move('left');
+        else if (e.key === 'ArrowRight') move('right');
+    }
+    function handleTouchStart(e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }
+    function handleTouchEnd(e) {
+        if (!touchStartX || !touchStartY) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const dx = touchEndX - touchStartX;
+        const dy = touchEndY - touchStartY;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx > 0) move('right'); else move('left');
+        } else {
+            if (dy > 0) move('down'); else move('up');
+        }
+        touchStartX = null; touchStartY = null;
+    }
+
+    function start() {
+        init();
+        document.addEventListener('keydown', handleKeyDown);
+        boardEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+        boardEl.addEventListener('touchend', handleTouchEnd);
+    }
+    function stop() {
+        document.removeEventListener('keydown', handleKeyDown);
+        boardEl.removeEventListener('touchstart', handleTouchStart);
+        boardEl.removeEventListener('touchend', handleTouchEnd);
+    }
+    return { start, stop };
+})());
+
+// Flappy Bird
+Object.assign(flappyBirdGame, (() => {
+    const canvas = document.getElementById('flappy-bird-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('flappy-score');
+    let animationFrameId;
+
+    let bird, pipes, score, frame;
+    const gravity = 0.5, lift = -10, pipeWidth = 80, pipeGap = 200;
+
+    function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        bird = { x: 50, y: canvas.height / 2, size: 30, velocity: 0 };
+        pipes = [];
+        score = 0;
+        frame = 0;
+        scoreEl.textContent = 0;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bird.x, bird.y, bird.size, bird.size);
+        ctx.fillStyle = 'green';
+        pipes.forEach(pipe => {
+            ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+            ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipeWidth, pipe.bottom);
+        });
+    }
+
+    function update() {
+        bird.velocity += gravity;
+        bird.y += bird.velocity;
+
+        if (frame % 90 === 0) {
+            const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
+            pipes.push({ x: canvas.width, top: top, bottom: canvas.height - top - pipeGap, passed: false });
+        }
+
+        pipes.forEach((pipe, index) => {
+            pipe.x -= 4;
+            if (pipe.x + pipeWidth < 0) pipes.splice(index, 1);
+
+            if (bird.x < pipe.x + pipeWidth && bird.x + bird.size > pipe.x &&
+                (bird.y < pipe.top || bird.y + bird.size > canvas.height - pipe.bottom)) {
+                stop();
+                showAlertAndReturn("게임 오버!");
+            }
+            
+            if (pipe.x + pipeWidth < bird.x && !pipe.passed) {
+                pipe.passed = true;
+                score++;
+                scoreEl.textContent = score;
+            }
+        });
+
+        if (bird.y + bird.size > canvas.height || bird.y < 0) {
+            stop();
+            showAlertAndReturn("게임 오버!");
+        }
+        frame++;
+    }
+    
+    function gameLoop() {
+        update();
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function jump() { bird.velocity = lift; }
+    function handleKeyDown(e) { if (e.code === 'Space') jump(); }
+    
+    function start() {
+        init();
+        document.addEventListener('keydown', handleKeyDown);
+        canvas.addEventListener('touchstart', jump);
+        gameLoop();
+    }
+    function stop() {
+        cancelAnimationFrame(animationFrameId);
+        document.removeEventListener('keydown', handleKeyDown);
+        canvas.removeEventListener('touchstart', jump);
+    }
+    return { start, stop };
+})());
+
+// Whack-a-Mole
+Object.assign(whackAMoleGame, (() => {
+    const canvas = document.getElementById('whack-a-mole-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('whack-score');
+    const timeEl = document.getElementById('whack-time');
+    let animationFrameId, timerInterval;
+
+    let moles, score, timeLeft;
+    const holeRadius = 40;
+    const moleImg = new Image();
+    moleImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg%3E%3Cpath d='M50,75 C20,75 20,45 50,45 C80,45 80,75 50,75 Z' fill='%238D6E63'/%3E%3Cellipse cx='50' cy='45' rx='25' ry='20' fill='%23A1887F'/%3E%3Ccircle cx='38' cy='40' r='4' fill='black'/%3E%3Ccircle cx='62' cy='40' r='4' fill='black'/%3E%3Cellipse cx='50' cy='52' rx='6' ry='4' fill='%23D7CCC8'/%3E%3Cpath d='M45,52 C48,55 52,55 55,52' stroke='black' fill='none' stroke-width='1.5'/%3E%3C/g%3E%3C/svg%3E";
+
+    function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        score = 0;
+        timeLeft = 30;
+        scoreEl.textContent = 0;
+        timeEl.textContent = timeLeft;
+        
+        moles = [];
+        const cols = Math.floor(canvas.width / (holeRadius * 2.5));
+        const rows = Math.floor((canvas.height - 100) / (holeRadius * 2.5));
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                moles.push({
+                    x: x * holeRadius * 2.5 + holeRadius * 1.25,
+                    y: y * holeRadius * 2.5 + holeRadius * 1.25 + 50,
+                    up: false,
+                    timer: Math.random() * 2000 + 1000
+                });
+            }
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        moles.forEach(mole => {
+            ctx.fillStyle = '#6D4C41';
+            ctx.beginPath();
+            ctx.arc(mole.x, mole.y, holeRadius, 0, Math.PI * 2);
+            ctx.fill();
+            if (mole.up) {
+                const moleSize = holeRadius * 1.8;
+                ctx.drawImage(moleImg, mole.x - moleSize / 2, mole.y - moleSize * 0.8, moleSize, moleSize);
+            }
+        });
+    }
+
+    function update(deltaTime) {
+        moles.forEach(mole => {
+            mole.timer -= deltaTime;
+            if (mole.timer <= 0) {
+                mole.up = !mole.up;
+                mole.timer = Math.random() * (mole.up ? 1000 : 2000) + 500;
+            }
+        });
+    }
+
+    let lastTime = 0;
+    function gameLoop(currentTime) {
+        if (!lastTime) lastTime = currentTime;
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+        
+        update(deltaTime);
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    
+    function whack(e) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : e;
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        moles.forEach(mole => {
+            if (mole.up && Math.hypot(x - mole.x, y - mole.y) < holeRadius) {
+                mole.up = false;
+                score++;
+                scoreEl.textContent = score;
+                mole.timer = 100; // Immediately hide
+            }
+        });
+    }
+
+    function start() {
+        init();
+        canvas.addEventListener('mousedown', whack);
+        canvas.addEventListener('touchstart', whack);
+        animationFrameId = requestAnimationFrame(gameLoop);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timeEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                stop();
+                showAlertAndReturn(`게임 종료! 최종 점수: ${score}`);
+            }
+        }, 1000);
+    }
+    function stop() {
+        cancelAnimationFrame(animationFrameId);
+        clearInterval(timerInterval);
+        canvas.removeEventListener('mousedown', whack);
+        canvas.removeEventListener('touchstart', whack);
+    }
+    return { start, stop };
+})());
+
+// Memory Game
+Object.assign(memoryGame, (() => {
+    const boardEl = document.getElementById('memory-board');
+    const triesEl = document.getElementById('memory-tries');
+    let cards, flippedCards, matchedPairs, tries;
+    const EMOJIS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+
+    function init() {
+        tries = 0;
+        matchedPairs = 0;
+        flippedCards = [];
+        triesEl.textContent = 0;
+        boardEl.innerHTML = '';
+        
+        cards = [...EMOJIS, ...EMOJIS]
+            .sort(() => 0.5 - Math.random())
+            .map((emoji, index) => ({ id: index, emoji: emoji, isFlipped: false, isMatched: false }));
+
+        cards.forEach(card => {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'memory-card';
+            cardEl.dataset.id = card.id;
+            cardEl.innerHTML = `
+                <div class="card-face card-front"></div>
+                <div class="card-face card-back">${card.emoji}</div>
+            `;
+            cardEl.addEventListener('click', () => flipCard(card, cardEl));
+            boardEl.appendChild(cardEl);
+        });
+    }
+
+    function flipCard(card, cardEl) {
+        if (flippedCards.length === 2 || card.isFlipped || card.isMatched) return;
+        
+        card.isFlipped = true;
+        cardEl.classList.add('is-flipped');
+        flippedCards.push({ card, cardEl });
+
+        if (flippedCards.length === 2) {
+            tries++;
+            triesEl.textContent = tries;
+            checkForMatch();
+        }
+    }
+
+    function checkForMatch() {
+        const [first, second] = flippedCards;
+        if (first.card.emoji === second.card.emoji) {
+            first.card.isMatched = true;
+            second.card.isMatched = true;
+            first.cardEl.classList.add('is-matched');
+            second.cardEl.classList.add('is-matched');
+            matchedPairs++;
+            flippedCards = [];
+            if (matchedPairs === EMOJIS.length) {
+                setTimeout(() => showAlertAndReturn(`성공! 시도 횟수: ${tries}`), 500);
+            }
+        } else {
+            setTimeout(() => {
+                first.card.isFlipped = false;
+                second.card.isFlipped = false;
+                first.cardEl.classList.remove('is-flipped');
+                second.cardEl.classList.remove('is-flipped');
+                flippedCards = [];
+            }, 1000);
+        }
+    }
+
+    function start() { init(); }
+    function stop() { /* No ongoing processes to stop */ }
+    return { start, stop };
+})());
+
+// Jump Game
+Object.assign(jumpGame, (() => {
+    const canvas = document.getElementById('jump-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('jump-score');
+    let animationFrameId;
+
+    let player, platforms, score, cameraY, keys;
+    const gravity = 0.4, jumpStrength = -13, playerSpeed = 7;
+
+    function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        player = { x: canvas.width / 2 - 15, y: canvas.height - 50, width: 30, height: 30, dy: 0 };
+        platforms = [{ x: canvas.width / 2 - 50, y: canvas.height - 20, width: 100 }];
+        score = 0;
+        cameraY = 0;
+        scoreEl.textContent = 0;
+        keys = { left: false, right: false };
+        
+        for (let i = 0; i < 20; i++) {
+            platforms.push({
+                x: Math.random() * (canvas.width - 100),
+                y: platforms[platforms.length - 1].y - (60 + Math.random() * 60),
+                width: 80 + Math.random() * 40
+            });
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(0, -cameraY);
+        
+        ctx.fillStyle = 'lime';
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+        
+        ctx.fillStyle = '#8B4513';
+        platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, 15));
+        
+        ctx.restore();
+    }
+
+    function update() {
+        // Horizontal movement
+        if (keys.left) player.x -= playerSpeed;
+        if (keys.right) player.x += playerSpeed;
+        
+        // Screen wrap
+        if (player.x > canvas.width) player.x = -player.width;
+        if (player.x + player.width < 0) player.x = canvas.width;
+
+        // Vertical movement
+        player.dy += gravity;
+        player.y += player.dy;
+
+        // Camera follow
+        const cameraThreshold = canvas.height / 2.5;
+        if (player.y < cameraY + cameraThreshold) {
+            cameraY = player.y - cameraThreshold;
+        }
+
+        // Collision with platforms (only when falling)
+        if (player.dy > 0) {
+            platforms.forEach(p => {
+                if (player.x < p.x + p.width && player.x + player.width > p.x &&
+                    player.y + player.height > p.y && player.y + player.height < p.y + 20) {
+                    player.dy = jumpStrength;
+                }
+            });
+        }
+
+        // Game over
+        if (player.y > cameraY + canvas.height) {
+            stop();
+            showAlertAndReturn("게임 오버!");
+        }
+        
+        score = Math.max(score, Math.floor(-cameraY / 10));
+        scoreEl.textContent = score;
+        
+        // Generate & remove platforms
+        const highestPlatform = platforms[platforms.length - 1];
+        if (highestPlatform.y > cameraY - 50) {
+            platforms.push({
+                x: Math.random() * (canvas.width - 100),
+                y: highestPlatform.y - (60 + Math.random() * 60),
+                width: 80 + Math.random() * 40
+            });
+        }
+        if (platforms.length > 0 && platforms[0].y > cameraY + canvas.height + 50) {
+            platforms.shift();
+        }
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    
+    function handleKeyDown(e) {
+        if (e.key === 'ArrowLeft') keys.left = true;
+        if (e.key === 'ArrowRight') keys.right = true;
+    }
+    function handleKeyUp(e) {
+        if (e.key === 'ArrowLeft') keys.left = false;
+        if (e.key === 'ArrowRight') keys.right = false;
+    }
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touchX = e.touches[0].clientX;
+        if (touchX < canvas.width / 2) keys.left = true;
+        else keys.right = true;
+    }
+    function handleTouchEnd(e) {
+        keys.left = false;
+        keys.right = false;
+    }
+    
+    function start() {
+        init();
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
+        gameLoop();
+    }
+    function stop() {
+        cancelAnimationFrame(animationFrameId);
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('keyup', handleKeyUp);
+        canvas.removeEventListener('touchstart', handleTouchStart);
+        canvas.removeEventListener('touchend', handleTouchEnd);
+    }
+    return { start, stop };
+})());
 
 </script>
 </body>
