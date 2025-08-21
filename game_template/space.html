@@ -39,7 +39,6 @@
             background: linear-gradient(90deg, #F6E05E, #F56565);
             transition: width 0.1s linear;
         }
-        /* 조이스틱 스타일 */
         #joystick-container {
             position: absolute;
             bottom: 30px;
@@ -68,7 +67,6 @@
     <div id="game-container" class="relative w-full h-full max-w-lg aspect-[9/16] bg-black shadow-2xl">
         <canvas id="gameCanvas"></canvas>
 
-        <!-- 인게임 UI -->
         <div id="in-game-ui" class="absolute top-0 left-0 w-full p-4 hidden">
             <div class="flex justify-between items-center">
                 <div class="text-2xl">❤️ <span id="lives">3</span></div>
@@ -79,14 +77,27 @@
             </div>
         </div>
 
-        <!-- 오버레이 화면 -->
         <div id="overlay" class="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-center p-4 z-10">
             <h1 id="title" class="text-6xl font-extrabold text-yellow-300 mb-4">소행성 피하기</h1>
             <p id="subtitle" class="text-xl mb-8">조이스틱으로 우주선을 조종해 살아남으세요!</p>
-            <button id="startButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">게임 시작</button>
+            <div class="flex space-x-4">
+                <button id="startButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">게임 시작</button>
+                <button id="helpButton" class="px-10 py-4 bg-gray-600 hover:bg-gray-700 rounded-full text-2xl font-bold shadow-lg">게임 설명</button>
+            </div>
         </div>
         
-        <!-- 조이스틱 -->
+        <!-- 설명 화면 -->
+        <div id="help-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
+            <h2 class="text-4xl font-bold text-yellow-300 mb-6">게임 설명</h2>
+            <div class="text-left max-w-sm space-y-4 text-lg">
+                <p>🚀 <span class="font-bold">목표:</span> 사방에서 날아오는 소행성을 피하며 각 스테이지에서 정해진 시간 동안 살아남으세요!</p>
+                <p>🕹️ <span class="font-bold">조작:</span> 화면 왼쪽 하단의 조이스틱을 움직여 우주선을 조종합니다.</p>
+                <p>🛡️ <span class="font-bold">보호막:</span> 이 아이템을 먹으면 5초간 소행성과 부딪혀도 한번 막아줍니다.</p>
+                <p>💣 <span class="font-bold">폭탄:</span> 이 아이템을 먹으면 화면의 모든 소행성이 즉시 사라집니다.</p>
+            </div>
+            <button id="closeHelpButton" class="mt-8 px-10 py-3 bg-red-500 hover:bg-red-600 rounded-full text-xl font-bold shadow-lg">닫기</button>
+        </div>
+        
         <div id="joystick-container" class="hidden">
             <div id="joystick-handle"></div>
         </div>
@@ -97,6 +108,9 @@
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('overlay');
         const startButton = document.getElementById('startButton');
+        const helpButton = document.getElementById('helpButton');
+        const helpOverlay = document.getElementById('help-overlay');
+        const closeHelpButton = document.getElementById('closeHelpButton');
         const titleEl = document.getElementById('title');
         const subtitleEl = document.getElementById('subtitle');
         const inGameUI = document.getElementById('in-game-ui');
@@ -107,7 +121,7 @@
         const joystickHandle = document.getElementById('joystick-handle');
 
         let animationFrameId;
-        let player, asteroids, particles, lives, gameOver, currentStageIndex;
+        let player, asteroids, particles, lives, gameOver, currentStageIndex, items;
         let stageTimer, stageDuration, lastTime;
         let joystickInput = { x: 0, y: 0 };
 
@@ -144,14 +158,19 @@
 
         class Player {
             constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.emoji = '🚀';
-                this.size = 40;
-                this.angle = -Math.PI / 2;
-                this.speed = 4;
+                this.x = x; this.y = y; this.emoji = '🚀'; this.size = 40;
+                this.angle = -Math.PI / 2; this.speed = 4; this.shielded = false;
             }
             draw() {
+                if (this.shielded) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(59, 130, 246, 1)';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.angle);
@@ -179,11 +198,8 @@
 
         class Asteroid {
             constructor(x, y, emoji, velocity) {
-                this.x = x;
-                this.y = y;
-                this.emoji = emoji;
-                this.size = 20 + Math.random() * 20;
-                this.velocity = velocity;
+                this.x = x; this.y = y; this.emoji = emoji;
+                this.size = 20 + Math.random() * 20; this.velocity = velocity;
             }
             draw() {
                 ctx.font = `${this.size}px serif`;
@@ -192,17 +208,14 @@
                 ctx.fillText(this.emoji, this.x, this.y);
             }
             update() {
-                this.x += this.velocity.x;
-                this.y += this.velocity.y;
+                this.x += this.velocity.x; this.y += this.velocity.y;
                 this.draw();
             }
         }
 
         class Particle {
             constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.size = Math.random() * 5 + 2;
+                this.x = x; this.y = y; this.size = Math.random() * 5 + 2;
                 this.color = `hsl(${Math.random() * 60 + 200}, 100%, 70%)`;
                 this.velocity = { x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 4 };
                 this.alpha = 1;
@@ -217,11 +230,25 @@
                 ctx.restore();
             }
             update() {
-                this.x += this.velocity.x;
-                this.y += this.velocity.y;
+                this.x += this.velocity.x; this.y += this.velocity.y;
                 this.alpha -= 0.02;
                 this.draw();
             }
+        }
+        
+        class Item {
+            constructor(x, y, type) {
+                this.x = x; this.y = y; this.type = type;
+                this.emoji = type === 'shield' ? '🛡️' : '💣';
+                this.size = 30;
+            }
+            draw() {
+                ctx.font = `${this.size}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.emoji, this.x, this.y);
+            }
+            update() { this.draw(); }
         }
 
         function initGame() {
@@ -236,6 +263,7 @@
             player = new Player(canvas.width / 2, canvas.height - 80);
             asteroids = [];
             particles = [];
+            items = [];
             stageDuration = stage.duration * 1000;
             stageTimer = stageDuration;
             lastTime = undefined;
@@ -252,11 +280,13 @@
             animationFrameId = requestAnimationFrame(animate);
         }
 
-        let spawnInterval;
+        let spawnInterval, itemInterval;
         function startSpawning() {
             clearInterval(spawnInterval);
+            clearInterval(itemInterval);
             const stage = STAGES[currentStageIndex];
             spawnInterval = setInterval(spawnAsteroid, stage.spawnRate);
+            itemInterval = setInterval(spawnItem, 10000);
         }
 
         function spawnAsteroid() {
@@ -278,6 +308,14 @@
             asteroids.push(new Asteroid(x, y, emoji, velocity));
         }
 
+        function spawnItem() {
+            if (gameOver) return;
+            const type = Math.random() < 0.5 ? 'shield' : 'bomb';
+            const x = Math.random() * (canvas.width - 60) + 30;
+            const y = Math.random() * (canvas.height - 100) + 50;
+            items.push(new Item(x, y, type));
+        }
+
         function animate(currentTime) {
             if (gameOver) return;
             animationFrameId = requestAnimationFrame(animate);
@@ -291,6 +329,16 @@
             player.update();
 
             particles.forEach((p, i) => p.alpha <= 0 ? particles.splice(i, 1) : p.update());
+            
+            items.forEach((item, i) => {
+                item.update();
+                const dist = Math.hypot(player.x - item.x, player.y - item.y);
+                if (dist < player.size / 2 + item.size / 2) {
+                    activateItem(item.type);
+                    items.splice(i, 1);
+                }
+            });
+
             asteroids.forEach((a, i) => {
                 a.update();
                 const dist = Math.hypot(player.x - a.x, player.y - a.y);
@@ -306,7 +354,24 @@
             }
         }
 
+        function activateItem(type) {
+            if (type === 'shield') {
+                player.shielded = true;
+                setTimeout(() => { player.shielded = false; }, 5000);
+            } else if (type === 'bomb') {
+                asteroids.forEach(a => {
+                     for (let i = 0; i < 10; i++) particles.push(new Particle(a.x, a.y));
+                });
+                asteroids = [];
+            }
+        }
+
         function handleCollision(index) {
+            if (player.shielded) {
+                player.shielded = false;
+                asteroids.splice(index, 1);
+                return;
+            }
             for (let i = 0; i < 20; i++) particles.push(new Particle(player.x, player.y));
             asteroids.splice(index, 1);
             lives--;
@@ -318,6 +383,7 @@
 
         function stageClear() {
             clearInterval(spawnInterval);
+            clearInterval(itemInterval);
             currentStageIndex++;
             if (currentStageIndex >= STAGES.length) {
                 endGame("모든 스테이지 클리어!");
@@ -336,6 +402,7 @@
         function endGame(message) {
             gameOver = true;
             clearInterval(spawnInterval);
+            clearInterval(itemInterval);
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
             titleEl.textContent = message;
@@ -355,6 +422,16 @@
             } else {
                 setupStage();
             }
+        });
+
+        helpButton.addEventListener('click', () => {
+            helpOverlay.classList.remove('hidden');
+            helpOverlay.classList.add('flex');
+        });
+
+        closeHelpButton.addEventListener('click', () => {
+            helpOverlay.classList.add('hidden');
+            helpOverlay.classList.remove('flex');
         });
         
         let joystickActive = false;
