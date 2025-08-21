@@ -80,13 +80,13 @@
         <div id="overlay" class="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-center p-4 z-10">
             <h1 id="title" class="text-6xl font-extrabold text-yellow-300 mb-4">소행성 피하기</h1>
             <p id="subtitle" class="text-xl mb-8">조이스틱으로 우주선을 조종해 살아남으세요!</p>
-            <div class="flex space-x-4">
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <button id="startButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">게임 시작</button>
+                <button id="continueButton" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-full text-2xl font-bold shadow-lg hidden">이어하기</button>
                 <button id="helpButton" class="px-10 py-4 bg-gray-600 hover:bg-gray-700 rounded-full text-2xl font-bold shadow-lg">게임 설명</button>
             </div>
         </div>
         
-        <!-- 설명 화면 -->
         <div id="help-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
             <h2 class="text-4xl font-bold text-yellow-300 mb-6">게임 설명</h2>
             <div class="text-left max-w-sm space-y-4 text-lg">
@@ -108,6 +108,7 @@
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('overlay');
         const startButton = document.getElementById('startButton');
+        const continueButton = document.getElementById('continueButton');
         const helpButton = document.getElementById('helpButton');
         const helpOverlay = document.getElementById('help-overlay');
         const closeHelpButton = document.getElementById('closeHelpButton');
@@ -124,6 +125,7 @@
         let player, asteroids, particles, lives, gameOver, currentStageIndex, items;
         let stageTimer, stageDuration, lastTime;
         let joystickInput = { x: 0, y: 0 };
+        let canContinue;
 
         gameOver = true;
 
@@ -131,8 +133,8 @@
             { name: "1. 과일 지대", duration: 15, spawnRate: 500, minSpeed: 1, maxSpeed: 2, asteroids: ['🍎', '🍊', '🍌'] },
             { name: "2. 채소 지대", duration: 15, spawnRate: 450, minSpeed: 1.2, maxSpeed: 2.5, asteroids: ['🥕', '🥦', '🍆'] },
             { name: "3. 디저트 지대", duration: 20, spawnRate: 400, minSpeed: 1.5, maxSpeed: 3, asteroids: ['🍩', '🍪', '🧁'] },
-            { name: "4. 아침식사 영역", duration: 20, spawnRate: 400, minSpeed: 1.6, maxSpeed: 3.2, asteroids: ['🍳', '🥞', '�'] },
-            { name: "5. 패스트푸드 성운", duration: 20, spawnRate: 380, minSpeed: 1.8, maxSpeed: 3.5, asteroids: ['🍔', '🍕', '🍟'] },
+            { name: "4. 아침식사 영역", duration: 20, spawnRate: 400, minSpeed: 1.6, maxSpeed: 3.2, asteroids: ['🍳', '🥞', '🥓'] },
+            { name: "5. 패스트푸드 성운", duration: 20, spawnRate: 380, minSpeed: 1.8, maxSpeed: 3.5, asteroids: ['🍔', '�', '🍟'] },
             { name: "6. 사탕 행성군", duration: 25, spawnRate: 350, minSpeed: 2.0, maxSpeed: 3.8, asteroids: ['🍭', '🍬', '🍫'] },
             { name: "7. 해산물 해역", duration: 25, spawnRate: 350, minSpeed: 2.2, maxSpeed: 4.0, asteroids: ['🦀', '🐙', '🐟'] },
             { name: "8. 동물 농장", duration: 25, spawnRate: 320, minSpeed: 2.4, maxSpeed: 4.2, asteroids: ['🐔', '🐷', '🐮'] },
@@ -255,6 +257,14 @@
             currentStageIndex = 0;
             lives = 3;
             gameOver = false;
+            canContinue = true; // 새 게임 시작 시 이어하기 가능
+            setupStage();
+        }
+
+        function continueGame() {
+            lives = 3;
+            gameOver = false;
+            canContinue = false; // 이어하기 기회 소진
             setupStage();
         }
 
@@ -411,6 +421,15 @@
             subtitleEl.textContent = `최종 생존 스테이지: ${finalStageName}`;
             
             startButton.textContent = "다시 시작";
+            startButton.classList.remove('hidden');
+            helpButton.classList.remove('hidden');
+
+            if (canContinue && message !== "모든 스테이지 클리어!") {
+                continueButton.classList.remove('hidden');
+            } else {
+                continueButton.classList.add('hidden');
+            }
+            
             overlay.classList.remove('hidden');
             inGameUI.classList.add('hidden');
             joystickContainer.classList.add('hidden');
@@ -419,9 +438,13 @@
         startButton.addEventListener('click', () => {
             if (gameOver) {
                 initGame();
-            } else {
+            } else { // 스테이지 클리어 시
                 setupStage();
             }
+        });
+
+        continueButton.addEventListener('click', () => {
+            continueGame();
         });
 
         helpButton.addEventListener('click', () => {
