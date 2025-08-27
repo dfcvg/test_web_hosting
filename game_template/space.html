@@ -59,10 +59,11 @@
 
         <div id="in-game-ui" class="absolute top-0 left-0 w-full p-4 hidden">
             <div class="flex justify-between items-center text-black">
-                <div class="text-2xl bg-white/50 px-3 py-1 rounded-lg">❤️ <span id="lives">3</span></div>
-                <div class="text-2xl bg-white/50 px-3 py-1 rounded-lg"><span id="stage-name"></span></div>
+                <div id="lives-ui" class="text-2xl bg-white/50 px-3 py-1 rounded-lg">❤️ <span id="lives">3</span></div>
+                <div id="stage-name-ui" class="text-2xl bg-white/50 px-3 py-1 rounded-lg"><span id="stage-name"></span></div>
+                <div id="survival-time-ui" class="text-2xl bg-white/50 px-3 py-1 rounded-lg hidden">시간: <span id="survival-time">0</span>s</div>
             </div>
-            <div class="progress-bar-container mx-auto mt-2">
+            <div id="progress-bar-wrapper" class="progress-bar-container mx-auto mt-2">
                 <div id="time-progress" class="progress-bar" style="width: 100%;"></div>
             </div>
         </div>
@@ -71,9 +72,15 @@
             <h1 id="title" class="text-6xl font-extrabold text-yellow-300 mb-4">동물들의 대탈주</h1>
             <p id="subtitle" class="text-xl mb-8">사육사가 되어 동물들을 피하세요!</p>
             <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <button id="startButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">게임 시작</button>
-                <button id="retryButton" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-full text-2xl font-bold shadow-lg hidden">스테이지 재시도</button>
-                <button id="helpButton" class="px-10 py-4 bg-gray-600 hover:bg-gray-700 rounded-full text-2xl font-bold shadow-lg">게임 설명</button>
+                <button id="storyModeButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">스토리 모드</button>
+                <button id="infiniteModeButton" class="px-10 py-4 bg-purple-600 hover:bg-purple-700 rounded-full text-2xl font-bold shadow-lg">무한 모드</button>
+            </div>
+             <div class="mt-4">
+                <button id="helpButton" class="px-10 py-2 bg-gray-600 hover:bg-gray-700 rounded-full text-xl font-bold shadow-lg">게임 설명</button>
+            </div>
+            <div id="end-game-buttons" class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 hidden mt-4">
+                 <button id="retryButton" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-full text-2xl font-bold shadow-lg">스테이지 재시도</button>
+                 <button id="restartButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">처음부터</button>
             </div>
         </div>
         
@@ -106,8 +113,10 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('overlay');
-        const startButton = document.getElementById('startButton');
+        const storyModeButton = document.getElementById('storyModeButton');
+        const infiniteModeButton = document.getElementById('infiniteModeButton');
         const retryButton = document.getElementById('retryButton');
+        const restartButton = document.getElementById('restartButton');
         const helpButton = document.getElementById('helpButton');
         const helpOverlay = document.getElementById('help-overlay');
         const closeHelpButton = document.getElementById('closeHelpButton');
@@ -117,19 +126,26 @@
         const titleEl = document.getElementById('title');
         const subtitleEl = document.getElementById('subtitle');
         const inGameUI = document.getElementById('in-game-ui');
+        const livesUI = document.getElementById('lives-ui');
         const livesEl = document.getElementById('lives');
+        const stageNameUI = document.getElementById('stage-name-ui');
         const stageNameEl = document.getElementById('stage-name');
+        const survivalTimeUI = document.getElementById('survival-time-ui');
+        const survivalTimeEl = document.getElementById('survival-time');
+        const progressBarWrapper = document.getElementById('progress-bar-wrapper');
         const timeProgressEl = document.getElementById('time-progress');
         const joystickContainer = document.getElementById('joystick-container');
         const joystickHandle = document.getElementById('joystick-handle');
+        const endGameButtons = document.getElementById('end-game-buttons');
 
         let animationFrameId;
         let player, animals, particles, lives, gameOver, currentStageIndex, items;
-        let stageTimer, stageDuration, lastTime, globalSpeedModifier;
+        let stageTimer, stageDuration, lastTime, globalSpeedModifier, survivalTime;
         let joystickInput = { x: 0, y: 0 };
         
         const CHARACTERS = ['🧑‍🌾', '👩‍🌾', '👨‍🌾', '👮', '🚜'];
         let selectedCharacter = CHARACTERS[0];
+        let currentGameMode = null;
 
         gameOver = true;
 
@@ -140,6 +156,7 @@
             { name: "4. 극지방", duration: 25, spawnRate: 380, minSpeed: 1.8, maxSpeed: 3.5, animals: ['🐧', '🐻‍❄️', '🦊', '🦭'] },
             { name: "5. 바다", duration: 30, spawnRate: 350, minSpeed: 2.0, maxSpeed: 4.0, animals: ['🐙', '🐡', '🦀', '🐬'] },
         ];
+        const ALL_ANIMALS = [...new Set(STAGES.flatMap(s => s.animals))];
 
         function resizeCanvas() {
             const container = document.getElementById('game-container');
@@ -147,6 +164,7 @@
             canvas.height = container.clientHeight;
         }
 
+        // --- FIX: 클래스 정의 수정 ---
         class Player {
             constructor(x, y) {
                 this.x = x; this.y = y; this.emoji = selectedCharacter; this.size = 40;
@@ -190,7 +208,8 @@
         class Animal {
             constructor(x, y, emoji, velocity) {
                 this.x = x; this.y = y; this.emoji = emoji;
-                this.size = 25 + Math.random() * 25; this.velocity = velocity;
+                this.size = 25 + Math.random() * 25;
+                this.velocity = velocity;
             }
             draw() {
                 ctx.font = `${this.size}px serif`;
@@ -228,7 +247,7 @@
                 this.draw();
             }
         }
-        
+
         class Item {
             constructor(x, y, type) {
                 this.x = x; this.y = y; this.type = type;
@@ -245,10 +264,14 @@
         }
 
         function initGame() {
-            currentStageIndex = 0;
             lives = 3;
             gameOver = false;
-            setupStage();
+            if (currentGameMode === 'story') {
+                currentStageIndex = 0;
+                setupStage();
+            } else {
+                setupInfiniteMode();
+            }
         }
 
         function retryCurrentStage() {
@@ -260,14 +283,16 @@
         function setupStage() {
             const stage = STAGES[currentStageIndex];
             player = new Player(canvas.width / 2, canvas.height - 80);
-            animals = [];
-            particles = [];
-            items = [];
+            animals = []; particles = []; items = [];
             stageDuration = stage.duration * 1000;
             stageTimer = stageDuration;
             lastTime = undefined;
             globalSpeedModifier = 1;
             
+            stageNameUI.classList.remove('hidden');
+            livesUI.classList.remove('hidden');
+            progressBarWrapper.classList.remove('hidden');
+            survivalTimeUI.classList.add('hidden');
             stageNameEl.textContent = stage.name;
             livesEl.textContent = lives;
             inGameUI.classList.remove('hidden');
@@ -280,20 +305,57 @@
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             animationFrameId = requestAnimationFrame(animate);
         }
+        
+        function setupInfiniteMode() {
+            player = new Player(canvas.width / 2, canvas.height - 80);
+            animals = []; particles = []; items = [];
+            lastTime = undefined;
+            globalSpeedModifier = 1;
+            survivalTime = 0;
+            
+            livesEl.textContent = lives;
+            stageNameUI.classList.add('hidden');
+            progressBarWrapper.classList.add('hidden');
+            survivalTimeUI.classList.remove('hidden');
+            livesUI.classList.remove('hidden');
+            inGameUI.classList.remove('hidden');
+            joystickContainer.classList.remove('hidden');
+            overlay.classList.add('hidden');
+            characterSelectOverlay.classList.add('hidden');
+
+            startSpawning();
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animationFrameId = requestAnimationFrame(animate);
+        }
 
         let spawnInterval, itemInterval;
         function startSpawning() {
             clearInterval(spawnInterval);
             clearInterval(itemInterval);
-            const stage = STAGES[currentStageIndex];
-            spawnInterval = setInterval(spawnAnimal, stage.spawnRate);
+            if (currentGameMode === 'story') {
+                const stage = STAGES[currentStageIndex];
+                spawnInterval = setInterval(spawnAnimal, stage.spawnRate);
+            } else { // Infinite Mode
+                spawnInterval = setInterval(spawnAnimal, 500); // Start with a base rate
+            }
             itemInterval = setInterval(spawnItem, 8000);
         }
 
         function spawnAnimal() {
             if (gameOver || !player) return;
-            const stage = STAGES[currentStageIndex];
-            const emoji = stage.animals[Math.floor(Math.random() * stage.animals.length)];
+            
+            let emoji, speedMultiplier = 1;
+
+            if (currentGameMode === 'story') {
+                const stage = STAGES[currentStageIndex];
+                emoji = stage.animals[Math.floor(Math.random() * stage.animals.length)];
+            } else { // Infinite Mode
+                const animalIndex = Math.min(ALL_ANIMALS.length - 1, Math.floor(survivalTime / 10));
+                emoji = ALL_ANIMALS[Math.floor(Math.random() * (animalIndex + 1))];
+                speedMultiplier = 1 + (survivalTime / 60);
+            }
+
             let x, y;
             const edge = Math.floor(Math.random() * 4);
             if (edge === 0) { x = Math.random() * canvas.width; y = -30; }
@@ -304,7 +366,7 @@
             const targetX = player.x + (Math.random() - 0.5) * 100;
             const targetY = player.y + (Math.random() - 0.5) * 100;
             const angle = Math.atan2(targetY - y, targetX - x);
-            const speed = Math.random() * (stage.maxSpeed - stage.minSpeed) + stage.minSpeed;
+            const speed = (Math.random() * 1.5 + 1) * speedMultiplier;
             const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
             animals.push(new Animal(x, y, emoji, velocity));
         }
@@ -347,10 +409,13 @@
                 }
             });
 
-            stageTimer -= deltaTime;
-            timeProgressEl.style.width = `${Math.max(0, stageTimer / stageDuration) * 100}%`;
-            if (stageTimer <= 0) {
-                stageClear();
+            if (currentGameMode === 'story') {
+                stageTimer -= deltaTime;
+                timeProgressEl.style.width = `${Math.max(0, stageTimer / stageDuration) * 100}%`;
+                if (stageTimer <= 0) stageClear();
+            } else {
+                survivalTime += deltaTime / 1000;
+                survivalTimeEl.textContent = survivalTime.toFixed(1);
             }
         }
 
@@ -372,7 +437,6 @@
                 setTimeout(() => { globalSpeedModifier = 1; }, 5000);
             }
         }
-
         function handleCollision(index) {
             if (player.shielded) {
                 player.shielded = false;
@@ -387,7 +451,6 @@
                 endGame("게임 오버!");
             }
         }
-
         function stageClear() {
             clearInterval(spawnInterval);
             clearInterval(itemInterval);
@@ -412,24 +475,40 @@
             clearInterval(itemInterval);
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
-            titleEl.textContent = message;
-
-            let finalStageName = STAGES[currentStageIndex] ? STAGES[currentStageIndex].name : STAGES[STAGES.length - 1].name;
-            subtitleEl.textContent = `최종 생존 구역: ${finalStageName}`;
             
-            startButton.textContent = "처음부터";
-            startButton.classList.remove('hidden');
-            helpButton.classList.remove('hidden');
-
-            if (message !== "모든 동물원에서 살아남았습니다!") {
-                retryButton.classList.remove('hidden');
-            } else {
+            titleEl.textContent = message;
+            
+            if (currentGameMode === 'story') {
+                let finalStageName = STAGES[currentStageIndex] ? STAGES[currentStageIndex].name : STAGES[STAGES.length - 1].name;
+                subtitleEl.textContent = `최종 생존 구역: ${finalStageName}`;
+                if (message !== "모든 동물원에서 살아남았습니다!") {
+                    retryButton.classList.remove('hidden');
+                } else {
+                    retryButton.classList.add('hidden');
+                }
+            } else { // Infinite Mode
+                subtitleEl.textContent = `최종 생존 시간: ${survivalTime.toFixed(1)}초`;
                 retryButton.classList.add('hidden');
             }
             
             overlay.classList.remove('hidden');
             inGameUI.classList.add('hidden');
             joystickContainer.classList.add('hidden');
+            endGameButtons.classList.remove('hidden');
+            storyModeButton.classList.add('hidden');
+            infiniteModeButton.classList.add('hidden');
+            helpButton.classList.add('hidden');
+        }
+
+        function showMainMenu() {
+            titleEl.textContent = "동물들의 대탈주";
+            subtitleEl.textContent = "사육사가 되어 동물들을 피하세요!";
+            overlay.classList.remove('hidden');
+            characterSelectOverlay.classList.add('hidden');
+            endGameButtons.classList.add('hidden');
+            storyModeButton.classList.remove('hidden');
+            infiniteModeButton.classList.remove('hidden');
+            helpButton.classList.remove('hidden');
         }
 
         function populateCharacterSelect() {
@@ -446,23 +525,20 @@
             });
         }
 
-        startButton.addEventListener('click', () => {
-            if (gameOver) {
-                overlay.classList.add('hidden');
-                characterSelectOverlay.classList.remove('hidden');
-                characterSelectOverlay.classList.add('flex');
-            } else {
-                setupStage();
-            }
-        });
+        function showCharacterSelect(mode) {
+            currentGameMode = mode;
+            overlay.classList.add('hidden');
+            characterSelectOverlay.classList.remove('hidden');
+            characterSelectOverlay.classList.add('flex');
+        }
 
+        storyModeButton.addEventListener('click', () => showCharacterSelect('story'));
+        infiniteModeButton.addEventListener('click', () => showCharacterSelect('infinite'));
         retryButton.addEventListener('click', () => { retryCurrentStage(); });
+        restartButton.addEventListener('click', () => { showMainMenu(); });
         helpButton.addEventListener('click', () => { helpOverlay.classList.remove('hidden'); helpOverlay.classList.add('flex'); });
         closeHelpButton.addEventListener('click', () => { helpOverlay.classList.add('hidden'); helpOverlay.classList.remove('flex'); });
-        backToMainButton.addEventListener('click', () => {
-            characterSelectOverlay.classList.add('hidden');
-            overlay.classList.remove('hidden');
-        });
+        backToMainButton.addEventListener('click', () => { showMainMenu(); });
         
         let joystickActive = false;
         function handleJoystick(e) {
@@ -500,6 +576,7 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
         populateCharacterSelect();
+
     </script>
 </body>
 </html>
