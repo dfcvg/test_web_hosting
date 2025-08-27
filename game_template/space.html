@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>소행성 피하기</title>
+    <title>동물들의 대탈주</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
@@ -12,19 +12,9 @@
             -webkit-tap-highlight-color: transparent;
         }
         canvas {
-            background-color: #0c0a18;
-            background-image: 
-                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
-                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
-                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px),
-                radial-gradient(rgba(255,255,255,.4), rgba(255,255,255,.1) 2px, transparent 30px);
-            background-size: 550px 550px, 350px 350px, 250px 250px, 150px 150px; 
-            background-position: 0 0, 40px 60px, 130px 270px, 70px 100px;
-            animation: move-background 20s linear infinite;
-        }
-        @keyframes move-background {
-            from { background-position: 0 0, 40px 60px, 130px 270px, 70px 100px; }
-            to { background-position: -550px -550px, -310px -350px, -250px -540px, -150px -250px; }
+            background-color: #A7F3D0; /* 연한 녹색 배경 */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M 10 10 C 20 20, 40 20, 50 10 S 70 0, 80 10 S 100 20, 100 20" stroke="%2368D391" fill="none" stroke-width="2"/><path d="M 0 50 C 10 40, 30 40, 40 50 S 60 60, 70 50 S 90 40, 100 50" stroke="%2368D391" fill="none" stroke-width="2"/></svg>');
+            background-size: 100px 100px;
         }
         .progress-bar-container {
             width: 80%;
@@ -36,17 +26,17 @@
         }
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #F6E05E, #F56565);
+            background: linear-gradient(90deg, #68D391, #F6E05E);
             transition: width 0.1s linear;
         }
         #joystick-container {
             position: absolute;
             bottom: 30px;
-            left: 30px;
+            right: 30px;
             width: 120px;
             height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -55,22 +45,22 @@
         #joystick-handle {
             width: 60px;
             height: 60px;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.4);
             border-radius: 50%;
             position: absolute;
             transition: transform 0.1s;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen m-0 p-0 overflow-hidden">
+<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen m-0 p-0 overflow-hidden">
 
     <div id="game-container" class="relative w-full h-full max-w-lg aspect-[9/16] bg-black shadow-2xl">
         <canvas id="gameCanvas"></canvas>
 
         <div id="in-game-ui" class="absolute top-0 left-0 w-full p-4 hidden">
-            <div class="flex justify-between items-center">
-                <div class="text-2xl">❤️ <span id="lives">3</span></div>
-                <div class="text-2xl"><span id="stage-name"></span></div>
+            <div class="flex justify-between items-center text-black">
+                <div class="text-2xl bg-white/50 px-3 py-1 rounded-lg">❤️ <span id="lives">3</span></div>
+                <div class="text-2xl bg-white/50 px-3 py-1 rounded-lg"><span id="stage-name"></span></div>
             </div>
             <div class="progress-bar-container mx-auto mt-2">
                 <div id="time-progress" class="progress-bar" style="width: 100%;"></div>
@@ -78,8 +68,8 @@
         </div>
 
         <div id="overlay" class="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-center p-4 z-10">
-            <h1 id="title" class="text-6xl font-extrabold text-yellow-300 mb-4">소행성 피하기</h1>
-            <p id="subtitle" class="text-xl mb-8">조이스틱으로 우주선을 조종해 살아남으세요!</p>
+            <h1 id="title" class="text-6xl font-extrabold text-yellow-300 mb-4">동물들의 대탈주</h1>
+            <p id="subtitle" class="text-xl mb-8">사육사가 되어 동물들을 피하세요!</p>
             <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <button id="startButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">게임 시작</button>
                 <button id="retryButton" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-full text-2xl font-bold shadow-lg hidden">스테이지 재시도</button>
@@ -87,13 +77,22 @@
             </div>
         </div>
         
+        <div id="character-select-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
+            <h2 class="text-4xl font-bold text-yellow-300 mb-6">사육사 선택</h2>
+            <div id="character-grid" class="grid grid-cols-3 gap-4"></div>
+            <button id="backToMainButton" class="mt-8 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+        </div>
+
         <div id="help-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
             <h2 class="text-4xl font-bold text-yellow-300 mb-6">게임 설명</h2>
-            <div class="text-left max-w-sm space-y-4 text-lg">
-                <p>🚀 <span class="font-bold">목표:</span> 사방에서 날아오는 소행성을 피하며 각 스테이지에서 정해진 시간 동안 살아남으세요!</p>
-                <p>🕹️ <span class="font-bold">조작:</span> 화면 왼쪽 하단의 조이스틱을 움직여 우주선을 조종합니다.</p>
-                <p>🛡️ <span class="font-bold">보호막:</span> 이 아이템을 먹으면 5초간 소행성과 부딪혀도 한번 막아줍니다.</p>
-                <p>💣 <span class="font-bold">폭탄:</span> 이 아이템을 먹으면 화면의 모든 소행성이 즉시 사라집니다.</p>
+            <div class="text-left max-w-sm space-y-3 text-lg">
+                <p>🧑‍🌾 <span class="font-bold">목표:</span> 탈출한 동물들을 피하며 각 구역에서 살아남으세요!</p>
+                <p>🕹️ <span class="font-bold">조작:</span> 조이스틱으로 사육사를 조종합니다.</p>
+                <p class="font-bold text-yellow-400 mt-4">아이템</p>
+                <p>🥅 <span class="font-bold">튼튼한 그물:</span> 5초간 충돌을 1회 막아줍니다.</p>
+                <p>💉 <span class="font-bold">마취총:</span> 화면의 모든 동물을 잠재웁니다.</p>
+                <p>🚙 <span class="font-bold">지프차:</span> 안전한 곳으로 즉시 이동합니다.</p>
+                <p>🍖 <span class="font-bold">먹이:</span> 5초간 모든 동물이 느려집니다.</p>
             </div>
             <button id="closeHelpButton" class="mt-8 px-10 py-3 bg-red-500 hover:bg-red-600 rounded-full text-xl font-bold shadow-lg">닫기</button>
         </div>
@@ -112,6 +111,9 @@
         const helpButton = document.getElementById('helpButton');
         const helpOverlay = document.getElementById('help-overlay');
         const closeHelpButton = document.getElementById('closeHelpButton');
+        const characterSelectOverlay = document.getElementById('character-select-overlay');
+        const characterGrid = document.getElementById('character-grid');
+        const backToMainButton = document.getElementById('backToMainButton');
         const titleEl = document.getElementById('title');
         const subtitleEl = document.getElementById('subtitle');
         const inGameUI = document.getElementById('in-game-ui');
@@ -122,33 +124,21 @@
         const joystickHandle = document.getElementById('joystick-handle');
 
         let animationFrameId;
-        let player, asteroids, particles, lives, gameOver, currentStageIndex, items;
-        let stageTimer, stageDuration, lastTime;
+        let player, animals, particles, lives, gameOver, currentStageIndex, items;
+        let stageTimer, stageDuration, lastTime, globalSpeedModifier;
         let joystickInput = { x: 0, y: 0 };
+        
+        const CHARACTERS = ['🧑‍🌾', '👩‍🌾', '👨‍🌾', '👮', '🚜'];
+        let selectedCharacter = CHARACTERS[0];
 
         gameOver = true;
 
         const STAGES = [
-            { name: "1. 과일 지대", duration: 15, spawnRate: 500, minSpeed: 1, maxSpeed: 2, asteroids: ['🍎', '🍊', '🍌'] },
-            { name: "2. 채소 지대", duration: 15, spawnRate: 450, minSpeed: 1.2, maxSpeed: 2.5, asteroids: ['🥕', '🥦', '🍆'] },
-            { name: "3. 디저트 지대", duration: 20, spawnRate: 400, minSpeed: 1.5, maxSpeed: 3, asteroids: ['🍩', '🍪', '🧁'] },
-            { name: "4. 아침식사 영역", duration: 20, spawnRate: 400, minSpeed: 1.6, maxSpeed: 3.2, asteroids: ['🍳', '🥞', '🥓'] },
-            { name: "5. 패스트푸드 성운", duration: 20, spawnRate: 380, minSpeed: 1.8, maxSpeed: 3.5, asteroids: ['🍔', '🍕', '🍟'] },
-            { name: "6. 사탕 행성군", duration: 25, spawnRate: 350, minSpeed: 2.0, maxSpeed: 3.8, asteroids: ['🍭', '🍬', '🍫'] },
-            { name: "7. 해산물 해역", duration: 25, spawnRate: 350, minSpeed: 2.2, maxSpeed: 4.0, asteroids: ['🦀', '🐙', '🐟'] },
-            { name: "8. 동물 농장", duration: 25, spawnRate: 320, minSpeed: 2.4, maxSpeed: 4.2, asteroids: ['🐔', '🐷', '🐮'] },
-            { name: "9. 야생동물 구역", duration: 25, spawnRate: 300, minSpeed: 2.5, maxSpeed: 4.5, asteroids: ['🦊', '🐻', '🐼'] },
-            { name: "10. 벌레 떼", duration: 30, spawnRate: 280, minSpeed: 2.6, maxSpeed: 4.8, asteroids: ['🐞', '🦋', '🐛'] },
-            { name: "11. 이상 기후", duration: 30, spawnRate: 280, minSpeed: 2.8, maxSpeed: 5.0, asteroids: ['☀️', '☁️', '⚡️'] },
-            { name: "12. 스포츠 용품", duration: 30, spawnRate: 250, minSpeed: 3.0, maxSpeed: 5.2, asteroids: ['⚽️', '🏀', '🏈'] },
-            { name: "13. 공구상자", duration: 30, spawnRate: 250, minSpeed: 3.2, maxSpeed: 5.5, asteroids: ['🔨', '🔧', '🔩'] },
-            { name: "14. 핼러윈 파티", duration: 35, spawnRate: 220, minSpeed: 3.4, maxSpeed: 5.8, asteroids: ['👻', '🎃', '💀'] },
-            { name: "15. 보물창고", duration: 35, spawnRate: 220, minSpeed: 3.5, maxSpeed: 6.0, asteroids: ['💰', '💎', '💵'] },
-            { name: "16. 교통지옥", duration: 35, spawnRate: 200, minSpeed: 3.6, maxSpeed: 6.2, asteroids: ['🚗', '🚌', '🚲'] },
-            { name: "17. 악기 연주회", duration: 35, spawnRate: 200, minSpeed: 3.8, maxSpeed: 6.5, asteroids: ['🎵', '🎸', '🥁'] },
-            { name: "18. 겨울 왕국", duration: 40, spawnRate: 180, minSpeed: 4.0, maxSpeed: 6.8, asteroids: ['❄️', '⛄️', '🧊'] },
-            { name: "19. 외계 침공", duration: 40, spawnRate: 150, minSpeed: 4.2, maxSpeed: 7.0, asteroids: ['👽', '🛸', '👾'] },
-            { name: "20. 최종 혼돈", duration: 60, spawnRate: 100, minSpeed: 5.0, maxSpeed: 8.0, asteroids: ['🍎', '🍕', '💀', '👽', '💰'] }
+            { name: "1. 농장", duration: 20, spawnRate: 500, minSpeed: 1, maxSpeed: 2, animals: ['🐔', '🐷', '🐮', '🐑'] },
+            { name: "2. 초원", duration: 20, spawnRate: 450, minSpeed: 1.2, maxSpeed: 2.5, animals: ['🦓', '🦒', '🐘', '🦏'] },
+            { name: "3. 정글", duration: 25, spawnRate: 400, minSpeed: 1.5, maxSpeed: 3, animals: ['🐒', '🐍', '🐅', '🦍'] },
+            { name: "4. 극지방", duration: 25, spawnRate: 380, minSpeed: 1.8, maxSpeed: 3.5, animals: ['🐧', '🐻‍❄️', '🦊', '🦭'] },
+            { name: "5. 바다", duration: 30, spawnRate: 350, minSpeed: 2.0, maxSpeed: 4.0, animals: ['🐙', '🐡', '🦀', '🐬'] },
         ];
 
         function resizeCanvas() {
@@ -159,7 +149,7 @@
 
         class Player {
             constructor(x, y) {
-                this.x = x; this.y = y; this.emoji = '🚀'; this.size = 40;
+                this.x = x; this.y = y; this.emoji = selectedCharacter; this.size = 40;
                 this.angle = -Math.PI / 2; this.speed = 4; this.shielded = false;
             }
             draw() {
@@ -197,10 +187,10 @@
             }
         }
 
-        class Asteroid {
+        class Animal {
             constructor(x, y, emoji, velocity) {
                 this.x = x; this.y = y; this.emoji = emoji;
-                this.size = 20 + Math.random() * 20; this.velocity = velocity;
+                this.size = 25 + Math.random() * 25; this.velocity = velocity;
             }
             draw() {
                 ctx.font = `${this.size}px serif`;
@@ -209,7 +199,8 @@
                 ctx.fillText(this.emoji, this.x, this.y);
             }
             update() {
-                this.x += this.velocity.x; this.y += this.velocity.y;
+                this.x += this.velocity.x * globalSpeedModifier;
+                this.y += this.velocity.y * globalSpeedModifier;
                 this.draw();
             }
         }
@@ -217,7 +208,7 @@
         class Particle {
             constructor(x, y) {
                 this.x = x; this.y = y; this.size = Math.random() * 5 + 2;
-                this.color = `hsl(${Math.random() * 60 + 200}, 100%, 70%)`;
+                this.color = `hsl(${Math.random() * 60 + 100}, 100%, 70%)`;
                 this.velocity = { x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 4 };
                 this.alpha = 1;
             }
@@ -231,7 +222,8 @@
                 ctx.restore();
             }
             update() {
-                this.x += this.velocity.x; this.y += this.velocity.y;
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
                 this.alpha -= 0.02;
                 this.draw();
             }
@@ -240,7 +232,7 @@
         class Item {
             constructor(x, y, type) {
                 this.x = x; this.y = y; this.type = type;
-                this.emoji = type === 'shield' ? '🛡️' : '💣';
+                this.emoji = type === 'shield' ? '🥅' : (type === 'bomb' ? '💉' : (type === 'teleport' ? '🚙' : '🍖'));
                 this.size = 30;
             }
             draw() {
@@ -268,18 +260,20 @@
         function setupStage() {
             const stage = STAGES[currentStageIndex];
             player = new Player(canvas.width / 2, canvas.height - 80);
-            asteroids = [];
+            animals = [];
             particles = [];
             items = [];
             stageDuration = stage.duration * 1000;
             stageTimer = stageDuration;
             lastTime = undefined;
+            globalSpeedModifier = 1;
             
             stageNameEl.textContent = stage.name;
             livesEl.textContent = lives;
             inGameUI.classList.remove('hidden');
             joystickContainer.classList.remove('hidden');
             overlay.classList.add('hidden');
+            characterSelectOverlay.classList.add('hidden');
 
             startSpawning();
             
@@ -292,14 +286,14 @@
             clearInterval(spawnInterval);
             clearInterval(itemInterval);
             const stage = STAGES[currentStageIndex];
-            spawnInterval = setInterval(spawnAsteroid, stage.spawnRate);
-            itemInterval = setInterval(spawnItem, 10000);
+            spawnInterval = setInterval(spawnAnimal, stage.spawnRate);
+            itemInterval = setInterval(spawnItem, 8000);
         }
 
-        function spawnAsteroid() {
-            if (gameOver) return;
+        function spawnAnimal() {
+            if (gameOver || !player) return;
             const stage = STAGES[currentStageIndex];
-            const emoji = stage.asteroids[Math.floor(Math.random() * stage.asteroids.length)];
+            const emoji = stage.animals[Math.floor(Math.random() * stage.animals.length)];
             let x, y;
             const edge = Math.floor(Math.random() * 4);
             if (edge === 0) { x = Math.random() * canvas.width; y = -30; }
@@ -312,12 +306,13 @@
             const angle = Math.atan2(targetY - y, targetX - x);
             const speed = Math.random() * (stage.maxSpeed - stage.minSpeed) + stage.minSpeed;
             const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
-            asteroids.push(new Asteroid(x, y, emoji, velocity));
+            animals.push(new Animal(x, y, emoji, velocity));
         }
 
         function spawnItem() {
             if (gameOver) return;
-            const type = Math.random() < 0.5 ? 'shield' : 'bomb';
+            const itemTypes = ['shield', 'bomb', 'teleport', 'slowmo'];
+            const type = itemTypes[Math.floor(Math.random() * itemTypes.length)];
             const x = Math.random() * (canvas.width - 60) + 30;
             const y = Math.random() * (canvas.height - 100) + 50;
             items.push(new Item(x, y, type));
@@ -334,9 +329,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             player.update();
-
             particles.forEach((p, i) => p.alpha <= 0 ? particles.splice(i, 1) : p.update());
-            
             items.forEach((item, i) => {
                 item.update();
                 const dist = Math.hypot(player.x - item.x, player.y - item.y);
@@ -346,7 +339,7 @@
                 }
             });
 
-            asteroids.forEach((a, i) => {
+            animals.forEach((a, i) => {
                 a.update();
                 const dist = Math.hypot(player.x - a.x, player.y - a.y);
                 if (dist < player.size / 2 + a.size / 2) {
@@ -366,21 +359,28 @@
                 player.shielded = true;
                 setTimeout(() => { player.shielded = false; }, 5000);
             } else if (type === 'bomb') {
-                asteroids.forEach(a => {
+                animals.forEach(a => {
                      for (let i = 0; i < 10; i++) particles.push(new Particle(a.x, a.y));
                 });
-                asteroids = [];
+                animals = [];
+            } else if (type === 'teleport') {
+                player.x = Math.random() * (canvas.width - 100) + 50;
+                player.y = Math.random() * (canvas.height - 100) + 50;
+                for (let i = 0; i < 30; i++) particles.push(new Particle(player.x, player.y));
+            } else if (type === 'slowmo') {
+                globalSpeedModifier = 0.5;
+                setTimeout(() => { globalSpeedModifier = 1; }, 5000);
             }
         }
 
         function handleCollision(index) {
             if (player.shielded) {
                 player.shielded = false;
-                asteroids.splice(index, 1);
+                animals.splice(index, 1);
                 return;
             }
             for (let i = 0; i < 20; i++) particles.push(new Particle(player.x, player.y));
-            asteroids.splice(index, 1);
+            animals.splice(index, 1);
             lives--;
             livesEl.textContent = lives;
             if (lives <= 0) {
@@ -393,11 +393,11 @@
             clearInterval(itemInterval);
             currentStageIndex++;
             if (currentStageIndex >= STAGES.length) {
-                endGame("모든 스테이지 클리어!");
+                endGame("모든 동물원에서 살아남았습니다!");
             } else {
-                titleEl.textContent = "스테이지 클리어!";
+                titleEl.textContent = "구역 클리어!";
                 subtitleEl.textContent = `다음: ${STAGES[currentStageIndex].name}`;
-                startButton.textContent = "다음 스테이지";
+                startButton.textContent = "다음 구역으로";
                 overlay.classList.remove('hidden');
                 inGameUI.classList.add('hidden');
                 joystickContainer.classList.add('hidden');
@@ -415,13 +415,13 @@
             titleEl.textContent = message;
 
             let finalStageName = STAGES[currentStageIndex] ? STAGES[currentStageIndex].name : STAGES[STAGES.length - 1].name;
-            subtitleEl.textContent = `최종 생존 스테이지: ${finalStageName}`;
+            subtitleEl.textContent = `최종 생존 구역: ${finalStageName}`;
             
             startButton.textContent = "처음부터";
             startButton.classList.remove('hidden');
             helpButton.classList.remove('hidden');
 
-            if (message !== "모든 스테이지 클리어!") {
+            if (message !== "모든 동물원에서 살아남았습니다!") {
                 retryButton.classList.remove('hidden');
             } else {
                 retryButton.classList.add('hidden');
@@ -432,26 +432,36 @@
             joystickContainer.classList.add('hidden');
         }
 
+        function populateCharacterSelect() {
+            characterGrid.innerHTML = '';
+            CHARACTERS.forEach(char => {
+                const charButton = document.createElement('button');
+                charButton.className = 'text-6xl p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors';
+                charButton.textContent = char;
+                charButton.onclick = () => {
+                    selectedCharacter = char;
+                    initGame();
+                };
+                characterGrid.appendChild(charButton);
+            });
+        }
+
         startButton.addEventListener('click', () => {
             if (gameOver) {
-                initGame();
-            } else { // 스테이지 클리어 시
+                overlay.classList.add('hidden');
+                characterSelectOverlay.classList.remove('hidden');
+                characterSelectOverlay.classList.add('flex');
+            } else {
                 setupStage();
             }
         });
 
-        retryButton.addEventListener('click', () => {
-            retryCurrentStage();
-        });
-
-        helpButton.addEventListener('click', () => {
-            helpOverlay.classList.remove('hidden');
-            helpOverlay.classList.add('flex');
-        });
-
-        closeHelpButton.addEventListener('click', () => {
-            helpOverlay.classList.add('hidden');
-            helpOverlay.classList.remove('flex');
+        retryButton.addEventListener('click', () => { retryCurrentStage(); });
+        helpButton.addEventListener('click', () => { helpOverlay.classList.remove('hidden'); helpOverlay.classList.add('flex'); });
+        closeHelpButton.addEventListener('click', () => { helpOverlay.classList.add('hidden'); helpOverlay.classList.remove('flex'); });
+        backToMainButton.addEventListener('click', () => {
+            characterSelectOverlay.classList.add('hidden');
+            overlay.classList.remove('hidden');
         });
         
         let joystickActive = false;
@@ -473,7 +483,7 @@
             
             joystickInput = { x: x / (rect.width / 4), y: y / (rect.width / 4) };
         }
-
+        
         joystickContainer.addEventListener('touchstart', (e) => {
             e.preventDefault();
             joystickActive = true;
@@ -489,6 +499,7 @@
         
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
+        populateCharacterSelect();
     </script>
 </body>
 </html>
