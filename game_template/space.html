@@ -7,49 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
-        body, button, h1, p, div {
+        body, button, h1, p, div, input {
             font-family: 'Jua', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
         canvas {
-            background-color: #A7F3D0; /* 연한 녹색 배경 */
+            background-color: #A7F3D0;
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M 10 10 C 20 20, 40 20, 50 10 S 70 0, 80 10 S 100 20, 100 20" stroke="%2368D391" fill="none" stroke-width="2"/><path d="M 0 50 C 10 40, 30 40, 40 50 S 60 60, 70 50 S 90 40, 100 50" stroke="%2368D391" fill="none" stroke-width="2"/></svg>');
             background-size: 100px 100px;
         }
-        .progress-bar-container {
-            width: 80%;
-            height: 20px;
-            background-color: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            overflow: hidden;
-            border: 2px solid white;
-        }
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #68D391, #F6E05E);
-            transition: width 0.1s linear;
-        }
-        #joystick-container {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 120px;
-            height: 120px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #joystick-handle {
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 50%;
-            position: absolute;
-            transition: transform 0.1s;
-        }
+        .progress-bar-container { width: 80%; height: 20px; background-color: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; border: 2px solid white; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #68D391, #F6E05E); transition: width 0.1s linear; }
+        #joystick-container { position: absolute; bottom: 30px; right: 30px; width: 120px; height: 120px; background: rgba(0, 0, 0, 0.2); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        #joystick-handle { width: 60px; height: 60px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; position: absolute; transition: transform 0.1s; }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex items-center justify-center min-h-screen m-0 p-0 overflow-hidden">
@@ -71,12 +41,13 @@
         <div id="overlay" class="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-center p-4 z-10">
             <h1 id="title" class="text-6xl font-extrabold text-yellow-300 mb-4">동물들의 대탈주</h1>
             <p id="subtitle" class="text-xl mb-8">사육사가 되어 동물들을 피하세요!</p>
-            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <button id="storyModeButton" class="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">스토리 모드</button>
-                <button id="infiniteModeButton" class="px-10 py-4 bg-purple-600 hover:bg-purple-700 rounded-full text-2xl font-bold shadow-lg">무한 모드</button>
-            </div>
-             <div class="mt-4">
-                <button id="helpButton" class="px-10 py-2 bg-gray-600 hover:bg-gray-700 rounded-full text-xl font-bold shadow-lg">게임 설명</button>
+            <div id="main-menu-buttons" class="flex flex-col space-y-4">
+                <div class="flex space-x-4">
+                    <button id="storyModeButton" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-full text-2xl font-bold shadow-lg">스토리</button>
+                    <button id="infiniteModeButton" class="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-full text-2xl font-bold shadow-lg">무한모드</button>
+                </div>
+                <button id="rankingButton" class="px-10 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-full text-xl font-bold shadow-lg">랭킹 보기</button>
+                <button id="helpButton" class="px-10 py-3 bg-gray-600 hover:bg-gray-700 rounded-full text-xl font-bold shadow-lg">게임 설명</button>
             </div>
             <div id="end-game-buttons" class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 hidden mt-4">
                  <button id="retryButton" class="px-10 py-4 bg-green-600 hover:bg-green-700 rounded-full text-2xl font-bold shadow-lg">스테이지 재시도</button>
@@ -84,10 +55,26 @@
             </div>
         </div>
         
+        <div id="nickname-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-30 hidden">
+            <h2 class="text-4xl font-bold text-yellow-300 mb-6">닉네임을 입력하세요</h2>
+            <input type="text" id="nicknameInput" class="text-black text-2xl text-center p-2 rounded-lg" maxlength="10" placeholder="10자 이내">
+            <button id="confirmNicknameButton" class="mt-8 px-10 py-3 bg-blue-500 hover:bg-blue-600 rounded-full text-xl font-bold shadow-lg">확인</button>
+        </div>
+
         <div id="character-select-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
             <h2 class="text-4xl font-bold text-yellow-300 mb-6">사육사 선택</h2>
             <div id="character-grid" class="grid grid-cols-3 gap-4"></div>
             <button id="backToMainButton" class="mt-8 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+        </div>
+
+        <div id="ranking-overlay" class="absolute inset-0 bg-black bg-opacity-90 flex-col items-center p-6 z-20 hidden text-center">
+            <h2 class="text-4xl font-bold text-yellow-300 mb-4">명예의 전당</h2>
+            <div class="flex border-b-2 border-yellow-300 w-full max-w-sm mb-4">
+                <button id="storyRankTab" class="flex-1 py-2 text-xl border-b-4 border-yellow-500 text-yellow-400">스토리 모드</button>
+                <button id="infiniteRankTab" class="flex-1 py-2 text-xl border-b-4 border-transparent">무한 모드</button>
+            </div>
+            <div id="ranking-list" class="w-full max-w-sm text-lg space-y-2 overflow-y-auto"></div>
+            <button id="closeRankingButton" class="mt-8 px-10 py-3 bg-red-500 hover:bg-red-600 rounded-full text-xl font-bold shadow-lg">닫기</button>
         </div>
 
         <div id="help-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
@@ -109,7 +96,24 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let db, auth, userId, userNickname;
+        let animationFrameId;
+        let player, animals, particles, lives, gameOver, currentStageIndex, items;
+        let stageTimer, stageDuration, lastTime, globalSpeedModifier, survivalTime;
+        let joystickInput = { x: 0, y: 0 };
+        const CHARACTERS = ['🧑‍🌾', '👩‍🌾', '👨‍🌾', '👮', '🚜'];
+        let selectedCharacter = CHARACTERS[0];
+        let currentGameMode = null;
+        gameOver = true;
+        
+        const isRankingEnabled = new URLSearchParams(window.location.search).get('rank_on') === '1';
+        const isNicknameEnabled = new URLSearchParams(window.location.search).get('nickname_on') === '1';
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('overlay');
@@ -137,18 +141,16 @@
         const joystickContainer = document.getElementById('joystick-container');
         const joystickHandle = document.getElementById('joystick-handle');
         const endGameButtons = document.getElementById('end-game-buttons');
-
-        let animationFrameId;
-        let player, animals, particles, lives, gameOver, currentStageIndex, items;
-        let stageTimer, stageDuration, lastTime, globalSpeedModifier, survivalTime;
-        let joystickInput = { x: 0, y: 0 };
+        const nicknameOverlay = document.getElementById('nickname-overlay');
+        const nicknameInput = document.getElementById('nicknameInput');
+        const confirmNicknameButton = document.getElementById('confirmNicknameButton');
+        const rankingButton = document.getElementById('rankingButton');
+        const rankingOverlay = document.getElementById('ranking-overlay');
+        const closeRankingButton = document.getElementById('closeRankingButton');
+        const storyRankTab = document.getElementById('storyRankTab');
+        const infiniteRankTab = document.getElementById('infiniteRankTab');
+        const rankingList = document.getElementById('ranking-list');
         
-        const CHARACTERS = ['🧑‍🌾', '👩‍🌾', '👨‍🌾', '👮', '🚜'];
-        let selectedCharacter = CHARACTERS[0];
-        let currentGameMode = null;
-
-        gameOver = true;
-
         const STAGES = [
             { name: "1. 농장", duration: 20, spawnRate: 500, minSpeed: 1, maxSpeed: 2, animals: ['🐔', '🐷', '🐮', '🐑'] },
             { name: "2. 초원", duration: 20, spawnRate: 450, minSpeed: 1.2, maxSpeed: 2.5, animals: ['🦓', '🦒', '🐘', '🦏'] },
@@ -164,7 +166,126 @@
             canvas.height = container.clientHeight;
         }
 
-        // --- FIX: 클래스 정의 수정 ---
+        async function setupFirebase() {
+            try {
+                const firebaseConfig = {
+                  apiKey: "AIzaSyCOinJqnLyonSS3nrYgauBmBOWGB1fdrHI",
+                  authDomain: "gamestudio1-3af17.firebaseapp.com",
+                  databaseURL: "https://gamestudio1-3af17-default-rtdb.asia-southeast1.firebasedatabase.app",
+                  projectId: "gamestudio1-3af17",
+                  storageBucket: "gamestudio1-3af17.appspot.com",
+                  messagingSenderId: "515670984841",
+                  appId: "1:515670984841:web:d6bc6b19e101bd931bde58",
+                  measurementId: "G-ECV6KSXEJK"
+                };
+                
+                if (!firebaseConfig.apiKey) {
+                    throw new Error("Firebase config is empty.");
+                }
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        checkNickname();
+                    } else {
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Anonymous sign-in failed:", error);
+                            if (error.code === 'auth/configuration-not-found') {
+                                console.warn("Firebase 랭킹 기능을 사용할 수 없습니다. Firebase 콘솔 > Authentication > Sign-in method에서 '익명' 로그인을 활성화해주세요.");
+                                disableRankingFeatures();
+                            }
+                            checkNickname();
+                        });
+                    }
+                });
+            } catch (e) {
+                console.error("Firebase initialization failed.", e);
+                disableRankingFeatures();
+                checkNickname();
+            }
+        }
+
+        function disableRankingFeatures() {
+            rankingButton.textContent = "랭킹 (비활성화)";
+            rankingButton.disabled = true;
+            rankingButton.classList.add("opacity-50", "cursor-not-allowed");
+        }
+
+        function checkNickname() {
+            if (!isRankingEnabled) return;
+            userNickname = localStorage.getItem('userNickname');
+            if (isNicknameEnabled && !userNickname) {
+                nicknameOverlay.classList.remove('hidden');
+                nicknameOverlay.classList.add('flex');
+            }
+        }
+
+        async function saveScore(mode, scoreValue) {
+            if (!isRankingEnabled || !db || !userId || !userNickname) return;
+            
+            const scoreRef = doc(db, `scores/${userId}`);
+            const docSnap = await getDoc(scoreRef);
+            
+            let dataToSave = { userId, nickname: userNickname };
+            let newHighScore = false;
+
+            if (mode === 'story') {
+                const currentBest = docSnap.exists() ? docSnap.data().storyModeScore || 0 : 0;
+                if (scoreValue > currentBest) {
+                    dataToSave.storyModeScore = scoreValue;
+                    newHighScore = true;
+                }
+            } else {
+                const currentBest = docSnap.exists() ? docSnap.data().infiniteModeScore || 0 : 0;
+                if (scoreValue > currentBest) {
+                    dataToSave.infiniteModeScore = scoreValue;
+                    newHighScore = true;
+                }
+            }
+
+            if (newHighScore) {
+                await setDoc(scoreRef, dataToSave, { merge: true });
+            }
+        }
+
+        async function showRanking(mode) {
+            if (!db) {
+                rankingList.innerHTML = '<p>랭킹을 불러올 수 없습니다.</p>';
+                return;
+            }
+            rankingList.innerHTML = '<p>로딩 중...</p>';
+            
+            const field = mode === 'story' ? 'storyModeScore' : 'infiniteModeScore';
+            const q = query(collection(db, "scores"), orderBy(field, "desc"), limit(10));
+            
+            try {
+                const querySnapshot = await getDocs(q);
+                let rankHtml = '';
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const score = mode === 'story' ? `${data.storyModeScore || 0} 스테이지` : `${(data.infiniteModeScore || 0).toFixed(1)}초`;
+                    rankHtml += `<div class="flex justify-between p-2 ${rank % 2 === 0 ? 'bg-gray-700' : ''} rounded">
+                                    <span>${rank}. ${data.nickname}</span>
+                                    <span>${score}</span>
+                                 </div>`;
+                    rank++;
+                });
+
+                if (rankHtml === '') {
+                    rankHtml = '<p>아직 랭킹이 없습니다.</p>';
+                }
+                rankingList.innerHTML = rankHtml;
+            } catch(e) {
+                console.error("Error fetching ranking:", e);
+                rankingList.innerHTML = '<p>랭킹을 불러오는 데 실패했습니다. Firestore 규칙을 확인하세요.</p>';
+            }
+        }
+
         class Player {
             constructor(x, y) {
                 this.x = x; this.y = y; this.emoji = selectedCharacter; this.size = 40;
@@ -247,7 +368,7 @@
                 this.draw();
             }
         }
-
+        
         class Item {
             constructor(x, y, type) {
                 this.x = x; this.y = y; this.type = type;
@@ -457,6 +578,7 @@
             currentStageIndex++;
             if (currentStageIndex >= STAGES.length) {
                 endGame("모든 동물원에서 살아남았습니다!");
+                saveScore('story', currentStageIndex);
             } else {
                 titleEl.textContent = "구역 클리어!";
                 subtitleEl.textContent = `다음: ${STAGES[currentStageIndex].name}`;
@@ -479,6 +601,7 @@
             titleEl.textContent = message;
             
             if (currentGameMode === 'story') {
+                saveScore('story', currentStageIndex);
                 let finalStageName = STAGES[currentStageIndex] ? STAGES[currentStageIndex].name : STAGES[STAGES.length - 1].name;
                 subtitleEl.textContent = `최종 생존 구역: ${finalStageName}`;
                 if (message !== "모든 동물원에서 살아남았습니다!") {
@@ -487,6 +610,7 @@
                     retryButton.classList.add('hidden');
                 }
             } else { // Infinite Mode
+                saveScore('infinite', survivalTime);
                 subtitleEl.textContent = `최종 생존 시간: ${survivalTime.toFixed(1)}초`;
                 retryButton.classList.add('hidden');
             }
@@ -526,6 +650,11 @@
         }
 
         function showCharacterSelect(mode) {
+            if (isRankingEnabled && !userNickname) {
+                nicknameOverlay.classList.remove('hidden');
+                nicknameOverlay.classList.add('flex');
+                return;
+            }
             currentGameMode = mode;
             overlay.classList.add('hidden');
             characterSelectOverlay.classList.remove('hidden');
@@ -534,11 +663,30 @@
 
         storyModeButton.addEventListener('click', () => showCharacterSelect('story'));
         infiniteModeButton.addEventListener('click', () => showCharacterSelect('infinite'));
-        retryButton.addEventListener('click', () => { retryCurrentStage(); });
-        restartButton.addEventListener('click', () => { showMainMenu(); });
+        retryButton.addEventListener('click', () => retryCurrentStage());
+        restartButton.addEventListener('click', () => showMainMenu());
         helpButton.addEventListener('click', () => { helpOverlay.classList.remove('hidden'); helpOverlay.classList.add('flex'); });
         closeHelpButton.addEventListener('click', () => { helpOverlay.classList.add('hidden'); helpOverlay.classList.remove('flex'); });
-        backToMainButton.addEventListener('click', () => { showMainMenu(); });
+        backToMainButton.addEventListener('click', () => showMainMenu());
+        rankingButton.addEventListener('click', () => {
+            rankingOverlay.classList.remove('hidden');
+            rankingOverlay.classList.add('flex');
+            showRanking('story');
+        });
+        closeRankingButton.addEventListener('click', () => {
+            rankingOverlay.classList.add('hidden');
+            rankingOverlay.classList.remove('flex');
+        });
+        storyRankTab.addEventListener('click', () => {
+            storyRankTab.classList.add('border-yellow-500', 'text-yellow-400');
+            infiniteRankTab.classList.remove('border-yellow-500', 'text-yellow-400');
+            showRanking('story');
+        });
+        infiniteRankTab.addEventListener('click', () => {
+            infiniteRankTab.classList.add('border-yellow-500', 'text-yellow-400');
+            storyRankTab.classList.remove('border-yellow-500', 'text-yellow-400');
+            showRanking('infinite');
+        });
         
         let joystickActive = false;
         function handleJoystick(e) {
@@ -573,10 +721,28 @@
             joystickInput = { x: 0, y: 0 };
         });
         
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        populateCharacterSelect();
+        confirmNicknameButton.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+            if (nickname.length > 0 && nickname.length <= 10) {
+                userNickname = nickname;
+                localStorage.setItem('userNickname', nickname);
+                nicknameOverlay.classList.add('hidden');
+            } else {
+                alert('닉네임은 1~10자 사이로 입력해주세요.');
+            }
+        });
 
+        window.addEventListener('resize', resizeCanvas);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            resizeCanvas();
+            populateCharacterSelect();
+            if (isRankingEnabled) {
+                setupFirebase();
+            } else {
+                rankingButton.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
