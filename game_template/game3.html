@@ -173,6 +173,7 @@
         const FRICTION = 0.998;
         const BOUNCER_STRENGTH = -18;
         const NO_MOVEMENT_THRESHOLD = 0.5;
+        const BOTTOM_BOUNCE_FACTOR = -0.7; // 바닥 매트 탄성
         
         const PlayerState = { IDLE: 'IDLE', FALLING: 'FALLING', SWINGING: 'SWINGING' };
 
@@ -242,10 +243,17 @@
 
         function handleInteractionStart(e) {
             e.preventDefault();
-            if (gameState !== 'playing' || player.state === PlayerState.SWINGING || !highlightedAnchor) return;
-            player.state = PlayerState.SWINGING;
-            hookedAnchor = highlightedAnchor;
-            ropeLength = Math.hypot(player.x - hookedAnchor.x, player.y - hookedAnchor.y);
+            if (gameState !== 'playing' || player.state === PlayerState.SWINGING) return;
+            
+            // 터치 시작 시점에서도 앵커를 다시 계산하여 정확도 향상
+            const pos = getEventPos(canvas, e);
+            handleInteractionMove(e); 
+
+            if (highlightedAnchor) {
+                player.state = PlayerState.SWINGING;
+                hookedAnchor = highlightedAnchor;
+                ropeLength = Math.hypot(player.x - hookedAnchor.x, player.y - hookedAnchor.y);
+            }
         }
 
         function handleInteractionEnd(e) {
@@ -370,8 +378,12 @@
             (level.obstacles || []).forEach(o => { if (Math.hypot(player.x - o.x, player.y - o.y) < player.radius + o.radius) failLevel(); });
             (level.bouncers || []).forEach(b => { if (player.vy > 0 && player.x > b.x && player.x < b.x + b.width && player.y + player.radius > b.y && player.y + player.radius < b.y + b.height) { player.y = b.y - player.radius; player.vy = BOUNCER_STRENGTH; } });
             
-            if (checkOnPlatform()) { player.state = PlayerState.IDLE; }
-            if (player.y > canvas.height + 100) { failLevel(); }
+            if (checkOnPlatform()) { 
+                player.state = PlayerState.IDLE;
+            } else if (player.y + player.radius > canvas.height) { // 바닥 바운스
+                player.y = canvas.height - player.radius;
+                player.vy *= BOTTOM_BOUNCE_FACTOR;
+            }
         }
 
         function checkOnPlatform() {
@@ -428,6 +440,10 @@
         function draw() {
             rotation += 0.01;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 바닥 매트 그리기
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
 
             ctx.save();
             ctx.translate(-cameraX, 0);
