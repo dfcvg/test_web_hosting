@@ -1,62 +1,434 @@
-  <script src='https://zimjs.org/cdn/1.3.2/createjs.js'></script>
-<script src='https://zimjs.org/cdn/cat/00/zim.js'></script>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>플래피 덩크 변기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body, button, h1, p, div {
+            font-family: 'Jua', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        canvas {
+            background: linear-gradient(to bottom, #4FC3F7, #0277BD); /* 바다 그라데이션 */
+            display: block;
+        }
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            bottom: -20px;
+            animation: rise 10s infinite ease-in;
+        }
+        @keyframes rise {
+            0% { transform: translateY(0) translateX(0); opacity: 1; }
+            50% { transform: translateX(10px); }
+            100% { transform: translateY(-1080px) translateX(-10px); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-black text-black flex items-center justify-center w-screen h-screen m-0 p-0 overflow-hidden">
 
-<script id='rendered-js' type='module'>
-const frame = new Frame("fit", 1024, 768, yellow,dark, "puzzle.jpg", "https://dfcvg.github.io/test_web_hosting/game_template/");
-frame.on("ready", ()=>{ // ES6 Arrow Function - similar to function(){}
-	zog("ready from ZIM Frame"); 
+    <div id="game-container" class="relative w-full h-full">
+        <canvas id="gameCanvas"></canvas>
+        <div id="bubbles-container" class="absolute inset-0 pointer-events-none"></div>
 
-	const stage = frame.stage;
-	const stageW = frame.width;
-	const stageH = frame.height;
+        <div id="in-game-ui" class="absolute top-4 left-0 right-0 mx-auto w-full flex justify-center items-center text-5xl font-bold text-white hidden" style="-webkit-text-stroke: 2px black;">
+            <span id="score">0</span>
+            <span id="timer" class="text-3xl ml-4"></span>
+        </div>
+
+        <div id="overlay" class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-4 z-10">
+            <div id="main-menu">
+                <h1 class="text-6xl font-extrabold text-white mb-2" style="-webkit-text-stroke: 3px #00B8D4;">플래피 덩크 변기</h1>
+                <p class="text-2xl text-yellow-300 mb-2">바다 생물을 변기 안에 덩크!</p>
+                <p class="text-lg text-white mb-8">(가로 모드 플레이를 추천합니다!)</p>
+                <div class="flex flex-col space-y-4">
+                    <button id="endlessModeButton" class="px-12 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-3xl font-bold shadow-lg">무한 모드</button>
+                    <button id="timeAttackButton" class="px-12 py-4 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-3xl font-bold shadow-lg">타임 어택</button>
+                    <button id="helpButton" class="mt-4 px-10 py-3 bg-gray-600 hover:bg-gray-700 rounded-full text-xl font-bold shadow-lg">게임 설명</button>
+                </div>
+            </div>
+
+            <div id="difficulty-select" class="hidden">
+                <h2 class="text-4xl font-bold text-white mb-6">난이도 선택</h2>
+                <div class="flex flex-col space-y-4">
+                    <button data-difficulty="easy" class="difficulty-btn px-12 py-3 bg-green-500 hover:bg-green-600 rounded-full text-2xl font-bold shadow-md">이지</button>
+                    <button data-difficulty="normal" class="difficulty-btn px-12 py-3 bg-blue-500 hover:bg-blue-600 rounded-full text-2xl font-bold shadow-md">노말</button>
+                    <button data-difficulty="hard" class="difficulty-btn px-12 py-3 bg-orange-500 hover:bg-orange-600 rounded-full text-2xl font-bold shadow-md">하드</button>
+                    <button data-difficulty="crazy" class="difficulty-btn px-12 py-4 bg-red-600 hover:bg-red-700 rounded-full text-2xl font-bold shadow-md">크레이지</button>
+                </div>
+                 <button id="backToMainButton" class="mt-8 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+            </div>
+            
+            <div id="character-select" class="hidden">
+                <h2 class="text-4xl font-bold text-white mb-6">캐릭터 선택</h2>
+                <div id="character-grid" class="grid grid-cols-3 gap-4"></div>
+                <button id="backToDifficultyButton" class="mt-8 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+            </div>
+
+            <div id="game-over-menu" class="hidden">
+                 <h2 class="text-6xl font-extrabold text-red-500 mb-4">게임 오버!</h2>
+                <p class="text-3xl mb-6 text-white">점수: <span id="final-score" class="text-yellow-300">0</span></p>
+                <button id="restartButton" class="mt-4 px-10 py-4 bg-blue-500 hover:bg-blue-600 rounded-full text-2xl font-bold shadow-lg">다시 시작</button>
+            </div>
+            
+            <div id="help-overlay" class="absolute inset-0 bg-black bg-opacity-80 flex-col items-center justify-center text-center p-6 z-20 hidden">
+                <h2 class="text-4xl font-bold text-yellow-300 mb-6">게임 설명</h2>
+                <div class="text-left max-w-sm space-y-3 text-lg">
+                    <p>🐠 <span class="font-bold">목표:</span> 화면을 탭하여 바다 생물을 점프시키고, 변기 안으로 골인시키세요!</p>
+                    <p>🕹️ <span class="font-bold">모드:</span> '무한 모드'는 최대한 많은 점수를, '타임 어택'은 60초 안에 최고 점수를 기록하는 것이 목표입니다.</p>
+                    <p class="font-bold text-yellow-400 mt-4">아이템</p>
+                    <p>🛡️ <span class="font-bold">보호막:</span> 5초간 변기 링에 부딪혀도 괜찮습니다.</p>
+                    <p>✨ <span class="font-bold">더블 스코어:</span> 5초간 획득 점수가 2배가 됩니다.</p>
+                </div>
+                <button id="closeHelpButton" class="mt-8 px-10 py-3 bg-red-500 hover:bg-red-600 rounded-full text-xl font-bold shadow-lg">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
+
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const overlay = document.getElementById('overlay');
+            const mainMenu = document.getElementById('main-menu');
+            const difficultySelect = document.getElementById('difficulty-select');
+            const characterSelect = document.getElementById('character-select');
+            const characterGrid = document.getElementById('character-grid');
+            const gameOverMenu = document.getElementById('game-over-menu');
+            const endlessModeButton = document.getElementById('endlessModeButton');
+            const timeAttackButton = document.getElementById('timeAttackButton');
+            const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+            const restartButton = document.getElementById('restartButton');
+            const backToMainButton = document.getElementById('backToMainButton');
+            const backToDifficultyButton = document.getElementById('backToDifficultyButton');
+            const inGameUI = document.getElementById('in-game-ui');
+            const scoreEl = document.getElementById('score');
+            const finalScoreEl = document.getElementById('final-score');
+            const timerEl = document.getElementById('timer');
+            const bubblesContainer = document.getElementById('bubbles-container');
+            const helpButton = document.getElementById('helpButton');
+            const helpOverlay = document.getElementById('help-overlay');
+            const closeHelpButton = document.getElementById('closeHelpButton');
+
+            let engine, runner;
+            let player, toilets, score, gameOver, frameCount, items, timer, lastTime;
+            let gameSettings, gameMode, scoreMultiplier;
+            
+            const CHARACTERS = ['🐠', '🐡', '🐙', '🦑', '🦀', '🦞'];
+            let selectedCharacter = CHARACTERS[0];
+            let selectedDifficulty = 'normal';
+
+            const DIFFICULTIES = {
+                easy:   { gravity: 1.0, jump: -11, pipeSpeed: 2, interval: 150, rimWidth: 120, color: '#4ADE80' },
+                normal: { gravity: 1.2, jump: -12, pipeSpeed: 2.5, interval: 120, rimWidth: 100, color: '#FFFFFF' },
+                hard:   { gravity: 1.4, jump: -13, pipeSpeed: 3, interval: 100, rimWidth: 90, color: '#F97316' },
+                crazy:  { gravity: 1.6, jump: -14, pipeSpeed: 3.5, interval: 80, rimWidth: 80, color: '#EF4444' }
+            };
+
+            function createBubbles() {
+                bubblesContainer.innerHTML = '';
+                for (let i = 0; i < 20; i++) {
+                    const bubble = document.createElement('div');
+                    const size = Math.random() * 15 + 5;
+                    bubble.style.width = `${size}px`;
+                    bubble.style.height = `${size}px`;
+                    bubble.style.left = `${Math.random() * 100}%`;
+                    bubble.style.animationDuration = `${Math.random() * 5 + 5}s`;
+                    bubble.style.animationDelay = `${Math.random() * 5}s`;
+                    bubble.classList.add('bubble');
+                    bubblesContainer.appendChild(bubble);
+                }
+            }
+
+            function resizeCanvas() {
+                const container = document.getElementById('game-container');
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
+
+            class Toilet {
+                constructor(x, y) {
+                    const rimThickness = 10;
+                    const rimWidth = gameSettings.rimWidth;
+                    const options = { 
+                        isStatic: true, 
+                        label: 'wall',
+                        restitution: 0.8,
+                        friction: 0.1
+                    };
+                    
+                    this.leftRim = Bodies.circle(x - rimWidth/2, y, rimThickness, options);
+                    this.rightRim = Bodies.circle(x + rimWidth/2, y, rimThickness, options);
+                    this.scoreSensor = Bodies.rectangle(x, y, rimWidth, 5, { isStatic: true, isSensor: true, label: 'score' });
+                    
+                    this.body = Composite.create({ bodies: [this.leftRim, this.rightRim, this.scoreSensor] });
+                    this.passed = false;
+                }
+
+                draw() {
+                    const leftPos = this.body.bodies[0].position;
+                    const rightPos = this.body.bodies[1].position;
+                    
+                    ctx.beginPath();
+                    ctx.ellipse((leftPos.x + rightPos.x) / 2, leftPos.y, (rightPos.x - leftPos.x) / 2, 15, 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = gameSettings.color;
+                    ctx.lineWidth = 8;
+                    ctx.stroke();
+                }
+            }
+            
+            class Item {
+                constructor(x, y, type) {
+                    this.x = x; this.y = y; this.type = type; this.emoji = type === 'shield' ? '🛡️' : '✨';
+                    this.size = 30;
+                    this.body = Bodies.circle(x, y, this.size / 2, { isStatic: true, isSensor: true, label: 'item' });
+                    World.add(engine.world, this.body);
+                }
+                draw() {
+                    ctx.font = `${this.size}px serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.emoji, this.body.position.x, this.body.position.y);
+                }
+                update() {
+                    Body.translate(this.body, { x: -gameSettings.pipeSpeed, y: 0 });
+                    this.draw();
+                }
+            }
+
+            function init() {
+                gameSettings = DIFFICULTIES[selectedDifficulty];
+                resizeCanvas();
+                
+                engine = Engine.create();
+                engine.world.gravity.y = gameSettings.gravity;
+                runner = Runner.create();
+
+                player = Bodies.circle(canvas.width / 4, canvas.height / 2, 25, { 
+                    label: 'player', 
+                    restitution: 0.5,
+                    friction: 0.05,
+                    frictionAir: 0.01,
+                });
+                World.add(engine.world, player);
+
+                toilets = [];
+                items = [];
+                score = 0;
+                gameOver = false;
+                frameCount = 0;
+                scoreMultiplier = 1;
+                lastTime = undefined;
+                scoreEl.textContent = 0;
+                
+                if (gameMode === 'timeAttack') {
+                    timer = 60000;
+                    timerEl.style.display = 'block';
+                } else {
+                    timerEl.style.display = 'none';
+                }
+                
+                overlay.classList.add('hidden');
+                inGameUI.classList.remove('hidden');
+                
+                Events.on(engine, 'afterUpdate', animate);
+                Events.on(engine, 'collisionStart', handleCollision);
+                Runner.run(runner, engine);
+            }
+
+            function animate(event) {
+                if (gameOver) return;
+                
+                const currentTime = event.timestamp;
+                if (lastTime === undefined) lastTime = currentTime;
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.save();
+                ctx.translate(player.position.x, player.position.y);
+                ctx.rotate(Math.min(Math.PI / 4, Math.max(-Math.PI / 4, player.velocity.y * 0.1)));
+                ctx.scale(-1, 1);
+                ctx.font = `50px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(selectedCharacter, 0, 0);
+                ctx.restore();
+
+                if (frameCount % gameSettings.interval === 0) {
+                    const y = Math.random() * (canvas.height - 400) + 200;
+                    toilets.push(new Toilet(canvas.width + 60, y));
+                    World.add(engine.world, toilets[toilets.length - 1].body);
+                }
+                
+                if (frameCount > 0 && frameCount % 350 === 0 && Math.random() < 0.5) {
+                    spawnItem();
+                }
+
+                toilets.forEach((toilet, i) => {
+                    Composite.translate(toilet.body, { x: -gameSettings.pipeSpeed, y: 0 });
+                    toilet.draw();
+                    if (toilet.body.bodies[0].position.x < -100) {
+                        World.remove(engine.world, toilet.body);
+                        toilets.splice(i, 1);
+                    }
+                });
+
+                items.forEach((item, i) => {
+                    item.update();
+                    if (item.body.position.x < -30) {
+                        World.remove(engine.world, item.body);
+                        items.splice(i, 1);
+                    }
+                });
+
+                if (player.position.y > canvas.height + 50 || player.position.y < -50) {
+                    endGame();
+                }
+                
+                if (gameMode === 'timeAttack') {
+                    timer -= deltaTime;
+                    timerEl.textContent = `⏱️ ${(timer / 1000).toFixed(1)}`;
+                    if (timer <= 0) endGame();
+                }
+                
+                frameCount++;
+            }
+            
+            function handleCollision(event) {
+                event.pairs.forEach(pair => {
+                    const { bodyA, bodyB } = pair;
+                    const labels = [bodyA.label, bodyB.label];
+                    
+                    if (labels.includes('player') && labels.includes('score')) {
+                        const sensorBody = bodyA.label === 'score' ? bodyA : bodyB;
+                        const parentToilet = toilets.find(t => t.scoreSensor === sensorBody);
+                        if (parentToilet && !parentToilet.passed && player.velocity.y > 0) {
+                            score += scoreMultiplier;
+                            scoreEl.textContent = score;
+                            parentToilet.passed = true;
+                        }
+                    } else if (labels.includes('player') && labels.includes('item')) {
+                        const itemBody = bodyA.label === 'item' ? bodyA : bodyB;
+                        const item = items.find(it => it.body === itemBody);
+                        if(item) {
+                            activateItem(item.type);
+                            World.remove(engine.world, item.body);
+                            items = items.filter(it => it !== item);
+                        }
+                    } else if (labels.includes('player') && labels.includes('wall')) {
+                        // Shield logic can be added here if needed
+                    }
+                });
+            }
+
+            function endGame() {
+                if(gameOver) return;
+                gameOver = true;
+                Runner.stop(runner);
+                Events.off(engine, 'afterUpdate', animate);
+                Events.off(engine, 'collisionStart', handleCollision);
+                inGameUI.classList.add('hidden');
+                overlay.classList.remove('hidden');
+                gameOverMenu.classList.remove('hidden');
+                finalScoreEl.textContent = score;
+            }
+
+            function handleUserAction(e) {
+                e.preventDefault();
+                if (!gameOver) {
+                    Body.setVelocity(player, { x: 0, y: gameSettings.jump });
+                    Body.setAngularVelocity(player, -0.15);
+                }
+            }
+            
+            function spawnItem() {
+                const type = Math.random() < 0.5 ? 'shield' : 'doubleScore';
+                const x = canvas.width + 30;
+                const y = Math.random() * (canvas.height - 300) + 150;
+                items.push(new Item(x, y, type));
+            }
+
+            function activateItem(type) {
+                if (type === 'shield') {
+                    // Implement shield logic
+                } else if (type === 'doubleScore') {
+                    scoreMultiplier = 2;
+                    setTimeout(() => { scoreMultiplier = 1; }, 5000);
+                }
+            }
+
+            function populateCharacterSelect() {
+                characterGrid.innerHTML = '';
+                CHARACTERS.forEach(char => {
+                    const charButton = document.createElement('button');
+                    charButton.className = 'text-6xl p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors';
+                    charButton.textContent = char;
+                    charButton.onclick = () => {
+                        selectedCharacter = char;
+                        characterSelect.classList.add('hidden');
+                        init();
+                    };
+                    characterGrid.appendChild(charButton);
+                });
+            }
+
+            function showDifficultySelect(mode) {
+                gameMode = mode;
+                mainMenu.classList.add('hidden');
+                difficultySelect.classList.remove('hidden');
+            }
+
+            endlessModeButton.addEventListener('click', () => showDifficultySelect('endless'));
+            timeAttackButton.addEventListener('click', () => showDifficultySelect('timeAttack'));
+
+            difficultyButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    selectedDifficulty = e.target.dataset.difficulty;
+                    difficultySelect.classList.add('hidden');
+                    characterSelect.classList.remove('hidden');
+                });
+            });
+
+            restartButton.addEventListener('click', () => {
+                gameOverMenu.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+            });
+            
+            backToMainButton.addEventListener('click', () => {
+                difficultySelect.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+            });
+
+            backToDifficultyButton.addEventListener('click', () => {
+                characterSelect.classList.add('hidden');
+                difficultySelect.classList.remove('hidden');
+            });
+            
+            helpButton.addEventListener('click', () => { helpOverlay.classList.remove('hidden'); helpOverlay.classList.add('flex'); });
+            closeHelpButton.addEventListener('click', () => { helpOverlay.classList.add('hidden'); helpOverlay.classList.remove('flex'); });
 
 
-	
-	const thumbs = [];
-	const cols = 3;
-	const rows = 3;
+            canvas.addEventListener('mousedown', handleUserAction);
+            canvas.addEventListener('touchstart', handleUserAction);
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') handleUserAction(e);
+            });
 
-	const image = asset("puzzle.jpg");
-	const w = image.width/cols;
-	const h = image.height/rows;
-
-	// cut up the image and shift its location
-	loop(rows, r=>{
-		loop(cols, c=>{
-			thumbs.push(new Bitmap(image, w, h, c*w, r*h));
-		});
-	});
-
-	var tile = new Tile(thumbs, cols, rows, 0, 0, true);
-	
-	
-	// the Scrambler will let the user slide the tile elements!
-	const puzzle = new Scrambler({
-		tile:tile,
-		time:2, // optional time to scramble and number of scrambles
-		num:3
-	}).center();
-	puzzle.on("complete", function () {
-		image.centerReg().animate({
-			props:{rotation:-360},
-			time:2,
-			ease:"backInOut",
-			call:()=>{
-				image.tap(()=>{
-					// time, wait, num
-					puzzle.addTo().scramble(2,0,4);
-					image.removeFrom();
-				}, true); // once				
-			}
-		});
-		puzzle.removeFrom();
-	});
-
-	
-	stage.update(); // this is needed to show any changes
-
-
-}); // end of ready
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            populateCharacterSelect();
+            createBubbles();
+        });
     </script>
-
-  
+</body>
+</html>
