@@ -2,531 +2,468 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 러닝 & 슈팅 게임</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>플래피 덩크 변기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #1a1a1a;
-            color: #fff;
-            font-family: 'Inter', sans-serif;
-            text-align: center;
-        }
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
+        body, button, h1, p, div {
+            font-family: 'Jua', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         canvas {
-            display: block; /* 캔버스 아래 작은 여백 제거 */
+            background: linear-gradient(to bottom, #4FC3F7, #0277BD);
+            position: relative;
+            overflow: hidden;
+            display: block;
         }
-        #ui-overlay {
+        .bubble {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            z-index: 10;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            bottom: -20px;
+            animation: rise 10s infinite ease-in;
         }
-        #weapon-status {
-            margin-top: 10px;
-            font-size: 18px;
-            color: #ffc107;
-            text-transform: uppercase;
-        }
-        #message-box {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 48px;
-            font-weight: bold;
-            text-shadow: 2px 2px 6px rgba(0,0,0,0.8);
-            display: none;
-            line-height: 1.5;
-        }
-        #menu-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-            z-index: 10;
-        }
-        .menu-title {
-            font-size: 60px;
-            font-weight: bold;
-            text-shadow: 3px 3px 8px rgba(0,0,0,0.8);
-        }
-        .menu-instructions {
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: #ccc;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-        }
-        .menu-button {
-            padding: 15px 30px;
-            font-size: 20px;
-            font-family: 'Inter', sans-serif;
-            font-weight: bold;
-            color: white;
-            background: linear-gradient(145deg, #3498db, #2980b9);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-        .menu-button:hover:not(:disabled) {
-            background: linear-gradient(145deg, #4aa3df, #3a90ca);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        }
-        .menu-button:disabled {
-            background: #555;
-            cursor: not-allowed;
-            opacity: 0.7;
+        @keyframes rise {
+            0% { transform: translateY(0) translateX(0); opacity: 1; }
+            50% { transform: translateX(10px); }
+            100% { transform: translateY(-1080px) translateX(-10px); opacity: 0; }
         }
     </style>
 </head>
-<body>
-    <div id="game-container">
-        <div id="ui-overlay">
-            <div>Score: <span id="score">0</span></div>
-            <div id="weapon-status"></div>
+<body class="bg-black text-black flex items-center justify-center w-screen h-screen m-0 p-0 overflow-hidden">
+
+    <div id="game-container" class="relative w-full h-full">
+        <canvas id="gameCanvas"></canvas>
+        <div id="bubbles-container" class="absolute inset-0 pointer-events-none"></div>
+
+        <div id="in-game-ui" class="absolute top-4 left-1/2 -translate-x-1/2 text-5xl font-bold text-white hidden" style="-webkit-text-stroke: 2px black;">
+            <span id="score">0</span>
+            <div id="timer" class="text-3xl"></div>
         </div>
-        <div id="message-box"></div>
-        <div id="menu-container">
-            <div class="menu-title">3D Running Game</div>
-            <div class="menu-instructions">
-                ←/→ or A/D: Move | Space: Jump | F: Shoot
+
+        <div id="overlay" class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-4 z-10">
+            <div id="main-menu">
+                <h1 class="text-6xl font-extrabold text-white mb-2" style="-webkit-text-stroke: 3px #00B8D4;">플래피 덩크 변기</h1>
+                <p class="text-2xl text-yellow-300 mb-8">바다 생물을 변기 안에 덩크!</p>
+                <div class="flex flex-col space-y-4">
+                    <button id="modeSelectButton" class="px-12 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-3xl font-bold shadow-lg">게임 시작</button>
+                    <button id="helpButton" class="px-10 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-full text-xl font-bold shadow-lg">게임 설명</button>
+                </div>
             </div>
-            <button id="start-button" class="menu-button" disabled>모델 로딩 중...</button>
+
+            <div id="mode-select" class="hidden flex-col space-y-4">
+                 <h2 class="text-4xl font-bold text-white mb-6">모드 선택</h2>
+                 <button data-mode="infinite" class="mode-btn px-12 py-4 bg-purple-500 hover:bg-purple-600 text-white rounded-full text-2xl font-bold shadow-md">무한 모드</button>
+                 <button data-mode="timeAttack" class="mode-btn px-12 py-4 bg-teal-500 hover:bg-teal-600 text-white rounded-full text-2xl font-bold shadow-md">타임 어택 (60초)</button>
+                 <button id="backToMainFromMode" class="mt-4 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+            </div>
+
+            <div id="difficulty-select" class="hidden flex-col space-y-4">
+                <h2 class="text-4xl font-bold text-white mb-6">난이도 선택</h2>
+                <button data-difficulty="easy" class="difficulty-btn px-12 py-3 bg-green-500 hover:bg-green-600 rounded-full text-2xl font-bold shadow-md">이지</button>
+                <button data-difficulty="normal" class="difficulty-btn px-12 py-3 bg-blue-500 hover:bg-blue-600 rounded-full text-2xl font-bold shadow-md">노말</button>
+                <button data-difficulty="hard" class="difficulty-btn px-12 py-3 bg-orange-500 hover:bg-orange-600 rounded-full text-2xl font-bold shadow-md">하드</button>
+                <button data-difficulty="crazy" class="difficulty-btn px-12 py-4 bg-red-600 hover:bg-red-700 rounded-full text-2xl font-bold shadow-md">크레이지</button>
+                <button id="backToModeButton" class="mt-4 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+            </div>
+            
+            <div id="character-select" class="hidden flex-col">
+                <h2 class="text-4xl font-bold text-white mb-6">캐릭터 선택</h2>
+                <div id="character-grid" class="grid grid-cols-3 gap-4"></div>
+                <button id="backToDifficultyButton" class="mt-8 px-10 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-xl font-bold shadow-lg">뒤로 가기</button>
+            </div>
+
+            <div id="game-over-menu" class="hidden">
+                 <h2 class="text-6xl font-extrabold text-red-500 mb-4">게임 오버!</h2>
+                <p class="text-3xl mb-6 text-white">점수: <span id="final-score" class="text-yellow-300">0</span></p>
+                <button id="restartButton" class="mt-4 px-10 py-4 bg-blue-500 hover:bg-blue-600 rounded-full text-2xl font-bold shadow-lg">다시 시작</button>
+            </div>
+        </div>
+
+        <div id="help-overlay" class="absolute inset-0 bg-black/80 hidden flex-col items-center justify-center text-center p-6 z-20">
+            <h2 class="text-4xl font-bold text-yellow-300 mb-6">게임 설명</h2>
+            <div class="text-left max-w-sm space-y-3 text-lg text-white">
+                <p>🐠 <span class="font-bold">목표:</span> 화면을 탭해서 바다 생물을 점프시키고, 변기 안으로 골인시키세요!</p>
+                <p>🕹️ <span class="font-bold">모드:</span> 무한 모드와 60초 타임 어택 모드가 있습니다.</p>
+                <p>🌶️ <span class="font-bold">고난이도:</span> 하드/크레이지 모드에서는 변기가 위아래로 움직이고, 해파리( jellyfish )와 불가사리( starfish ) 방해물이 나타납니다!</p>
+            </div>
+            <button id="closeHelpButton" class="mt-8 px-10 py-3 bg-red-500 hover:bg-red-600 rounded-full text-xl font-bold shadow-lg">닫기</button>
+        </div>
+        
+        <div id="orientation-warning" class="absolute inset-0 bg-black/90 hidden flex-col items-center justify-center text-center p-6 z-30">
+            <h2 class="text-4xl font-bold text-yellow-300 mb-6">🔄</h2>
+            <p class="text-2xl text-white">원활한 플레이를 위해 기기를 가로로 돌려주세요.</p>
         </div>
     </div>
 
-    <!-- Three.js 라이브러리 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- GLTF 모델 로더 -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-
     <script>
-        // --- 전역 변수 선언 ---
-        let scene, camera, renderer, player, ground;
-        let obstacles = [];
-        let bullets = [];
-        let particles = [];
-        let items = [];
-        let score = 0;
-        let gameActive = false;
-        const keyboard = {};
-        let obstacleSpawnInterval, itemSpawnInterval;
-        const obstacleSpeed = 0.5;
-        const bulletSpeed = 1.0;
-        let mixer;
-        const clock = new THREE.Clock();
-        let obstacleTexture;
-        let playerWeapon = 'default';
-        let powerUpTimeout = null;
-        
-        // 플레이어 상태 관련 변수
-        const playerSpeed = 0.2;
-        let playerVelocityY = 0;
-        const jumpPower = 0.2;
-        const gravity = -0.01;
-        const playerInitialY = 1;
+        document.addEventListener('DOMContentLoaded', () => {
+            const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
 
-        // UI 요소
-        const scoreElement = document.getElementById('score');
-        const messageBox = document.getElementById('message-box');
-        const menuContainer = document.getElementById('menu-container');
-        const startButton = document.getElementById('start-button');
-        const weaponStatusElement = document.getElementById('weapon-status');
-        
-        // --- 초기화 함수 ---
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true;
-            document.getElementById('game-container').appendChild(renderer.domElement);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(5, 10, 7);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
             
-            const textureLoader = new THREE.TextureLoader();
+            const overlay = document.getElementById('overlay');
+            const mainMenu = document.getElementById('main-menu');
+            const modeSelect = document.getElementById('mode-select');
+            const difficultySelect = document.getElementById('difficulty-select');
+            const characterSelect = document.getElementById('character-select');
+            const characterGrid = document.getElementById('character-grid');
+            const gameOverMenu = document.getElementById('game-over-menu');
+            const helpOverlay = document.getElementById('help-overlay');
+            const orientationWarning = document.getElementById('orientation-warning');
+
+            const modeSelectButton = document.getElementById('modeSelectButton');
+            const helpButton = document.getElementById('helpButton');
+            const closeHelpButton = document.getElementById('closeHelpButton');
+            const modeButtons = document.querySelectorAll('.mode-btn');
+            const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+            const restartButton = document.getElementById('restartButton');
+            const backToMainFromMode = document.getElementById('backToMainFromMode');
+            const backToModeButton = document.getElementById('backToModeButton');
+            const backToDifficultyButton = document.getElementById('backToDifficultyButton');
+
+            const inGameUI = document.getElementById('in-game-ui');
+            const scoreEl = document.getElementById('score');
+            const timerEl = document.getElementById('timer');
+            const finalScoreEl = document.getElementById('final-score');
+            const bubblesContainer = document.getElementById('bubbles-container');
+
+            let engine, runner;
+            let player, toilets, obstacles, score, gameOver, frameCount, timeAttackTimer;
+            let gameSettings;
             
-            const skyTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/textures/2294472375_24a3b8ef46_o.jpg', () => {
-                const rt = new THREE.WebGLCubeRenderTarget(skyTexture.image.height);
-                rt.fromEquirectangularTexture(renderer, skyTexture);
-                scene.background = rt.texture;
-            });
+            const CHARACTERS = ['🐠', '🐡', '🐙', '🦑', '🦀', '🦞'];
+            let selectedCharacter = CHARACTERS[0];
+            let selectedDifficulty = 'normal';
+            let selectedMode = 'infinite';
+
+            const DIFFICULTIES = {
+                easy:   { gravity: 1.0, jump: -11, pipeSpeed: 2, interval: 150, rimWidth: 140, color: '#4ADE80' },
+                normal: { gravity: 1.2, jump: -12, pipeSpeed: 2.5, interval: 120, rimWidth: 120, color: '#FFFFFF' },
+                hard:   { gravity: 1.4, jump: -13, pipeSpeed: 3, interval: 100, rimWidth: 100, color: '#F97316' },
+                crazy:  { gravity: 1.6, jump: -14, pipeSpeed: 3.5, interval: 80, rimWidth: 90, color: '#EF4444' }
+            };
             
-            const groundTexture = textureLoader.load('https://threejs.org/examples/textures/minecraft/grass.png');
-            groundTexture.wrapS = THREE.RepeatWrapping;
-            groundTexture.wrapT = THREE.RepeatWrapping;
-            groundTexture.repeat.set(40, 200);
-            groundTexture.magFilter = THREE.NearestFilter;
-            groundTexture.minFilter = THREE.NearestFilter;
-
-
-            const groundGeometry = new THREE.PlaneGeometry(40, 1000);
-            const groundMaterial = new THREE.MeshStandardMaterial({ map: groundTexture });
-            ground = new THREE.Mesh(groundGeometry, groundMaterial);
-            ground.rotation.x = -Math.PI / 2;
-            ground.position.y = -0.5;
-            ground.receiveShadow = true;
-            scene.add(ground);
-
-            obstacleTexture = textureLoader.load('https://threejs.org/examples/textures/crate.gif');
-            
-            const loader = new THREE.GLTFLoader();
-            loader.load('https://threejs.org/examples/models/gltf/Soldier.glb', 
-                (gltf) => {
-                    player = gltf.scene;
-                    player.position.y = playerInitialY;
-                    player.scale.set(1.5, 1.5, 1.5);
-                    player.traverse(node => { if (node.isMesh) node.castShadow = true; });
-                    scene.add(player);
-                    mixer = new THREE.AnimationMixer(player);
-                    const runClip = THREE.AnimationClip.findByName(gltf.animations, 'Run');
-                    if (runClip) mixer.clipAction(runClip).play();
-                    startButton.disabled = false;
-                    startButton.innerText = '게임 시작';
-                }, 
-                undefined, 
-                (error) => {
-                    console.error('모델 로드 실패:', error);
-                    startButton.innerText = '모델 로드 실패!';
-                    startButton.style.background = '#e74c3c';
-                }
-            );
-
-            camera.position.set(0, 6, 12);
-            camera.lookAt(0, 2, 0);
-            window.addEventListener('keydown', onKeyDown);
-            window.addEventListener('keyup', onKeyUp);
-            window.addEventListener('resize', onWindowResize);
-            startButton.addEventListener('click', startGame);
-            animate();
-        }
-
-        // --- 애니메이션 루프 ---
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-            
-            if (gameActive && player) {
-                if (mixer) mixer.update(delta);
-
-                handlePlayerMovement();
-                updateObstacles();
-                updateItems();
-                updateBullets();
-                updateParticles();
-
-                score += 1;
-                scoreElement.innerText = score;
-            }
-            if (items.length > 0) {
-                items.forEach(item => item.rotation.y += 0.02);
-            }
-            renderer.render(scene, camera);
-        }
-
-        function handlePlayerMovement() {
-            if (keyboard[37] || keyboard[65]) player.position.x -= playerSpeed;
-            if (keyboard[39] || keyboard[68]) player.position.x += playerSpeed;
-            player.position.x = Math.max(-8, Math.min(8, player.position.x));
-
-            if ((keyboard[32] || keyboard[38]) && player.position.y <= playerInitialY) {
-                playerVelocityY = jumpPower;
-            }
-            playerVelocityY += gravity;
-            player.position.y += playerVelocityY;
-
-            if (player.position.y < playerInitialY) {
-                player.position.y = playerInitialY;
-                playerVelocityY = 0;
-            }
-        }
-        
-        function updateObstacles() {
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                const obstacle = obstacles[i];
-                obstacle.position.z += obstacleSpeed;
-                if (obstacle.position.z > camera.position.z + 5) {
-                    scene.remove(obstacle);
-                    obstacles.splice(i, 1);
-                } else if (checkCollision(player, obstacle, new THREE.Vector3(1, 2, 1))) {
-                    gameOver();
-                    return;
+            function createBubbles() {
+                bubblesContainer.innerHTML = '';
+                for (let i = 0; i < 20; i++) {
+                    const bubble = document.createElement('div');
+                    const size = Math.random() * 15 + 5;
+                    bubble.style.width = `${size}px`;
+                    bubble.style.height = `${size}px`;
+                    bubble.style.left = `${Math.random() * 100}%`;
+                    bubble.style.animationDuration = `${Math.random() * 5 + 5}s`;
+                    bubble.style.animationDelay = `${Math.random() * 5}s`;
+                    bubble.classList.add('bubble');
+                    bubblesContainer.appendChild(bubble);
                 }
             }
-        }
-        
-        function updateItems() {
-            for (let i = items.length - 1; i >= 0; i--) {
-                const item = items[i];
-                item.position.z += obstacleSpeed;
-                if (item.position.z > camera.position.z + 5) {
-                    scene.remove(item);
-                    items.splice(i, 1);
-                } else if (checkCollision(player, item, new THREE.Vector3(2, 2, 2))) {
-                    activatePowerUp(item.userData.type);
-                    scene.remove(item);
-                    items.splice(i, 1);
+
+            function resizeCanvas() {
+                const container = document.getElementById('game-container');
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                checkOrientation();
+            }
+
+            function checkOrientation() {
+                if (window.innerHeight > window.innerWidth) {
+                    orientationWarning.style.display = 'flex';
+                } else {
+                    orientationWarning.style.display = 'none';
                 }
             }
-        }
 
-        function updateBullets() {
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                const bullet = bullets[i];
-                bullet.position.add(bullet.userData.velocity);
-                let bulletHit = false;
-
-                for (let j = obstacles.length - 1; j >= 0; j--) {
-                    const obstacle = obstacles[j];
-                    if (checkCollision(bullet, obstacle, new THREE.Vector3(6,6,6))) {
-                        bulletHit = true;
-                        obstacle.userData.health -= bullet.userData.damage;
-                        updateHealthLabel(obstacle);
-                        
-                        if (obstacle.userData.health <= 0) {
-                            createExplosion(obstacle.position);
-                            scene.remove(obstacle);
-                            obstacles.splice(j, 1);
-                            score += 100;
-                        } else if (obstacle.userData.health === 2) {
-                            obstacle.material.color.set(0xffff00);
-                        } else if (obstacle.userData.health === 1) {
-                            obstacle.material.color.set(0xff0000);
-                        }
-                        break; 
+            class Toilet {
+                constructor(x, y) {
+                    const rimThickness = 15;
+                    const rimWidth = gameSettings.rimWidth;
+                    const options = { isStatic: true, label: 'wall', restitution: 0.8, friction: 0.1 };
+                    
+                    this.leftRim = Bodies.circle(x - rimWidth/2, y, rimThickness, options);
+                    this.rightRim = Bodies.circle(x + rimWidth/2, y, rimThickness, options);
+                    this.scoreSensor = Bodies.rectangle(x, y, rimWidth-rimThickness, 5, { isStatic: true, isSensor: true, label: 'score' });
+                    
+                    this.body = Composite.create({ bodies: [this.leftRim, this.rightRim, this.scoreSensor] });
+                    this.passed = false;
+                    
+                    if (selectedDifficulty === 'hard' || selectedDifficulty === 'crazy') {
+                        this.verticalSpeed = (Math.random() - 0.5) * 2;
+                        this.initialY = y;
                     }
                 }
 
-                if (bulletHit || bullet.position.z < -100) {
-                    scene.remove(bullet);
-                    bullets.splice(i, 1);
+                draw() {
+                    const leftPos = this.body.bodies[0].position;
+                    const rightPos = this.body.bodies[1].position;
+                    
+                    ctx.beginPath();
+                    ctx.ellipse((leftPos.x + rightPos.x) / 2, leftPos.y, (rightPos.x - leftPos.x) / 2 + 5, 20, 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = gameSettings.color;
+                    ctx.lineWidth = 10;
+                    ctx.stroke();
+                }
+
+                update() {
+                    let verticalMove = 0;
+                     if (this.verticalSpeed) {
+                         verticalMove = this.verticalSpeed;
+                         if (this.body.bodies[0].position.y < this.initialY - 50 || this.body.bodies[0].position.y > this.initialY + 50) {
+                            this.verticalSpeed *= -1;
+                         }
+                    }
+                    Composite.translate(this.body, { x: -gameSettings.pipeSpeed, y: verticalMove });
+                    this.draw();
                 }
             }
-        }
-
-        function updateParticles() {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const particle = particles[i];
-                particle.position.add(particle.userData.velocity);
-                particle.userData.life--;
-                if(particle.userData.life <= 0) {
-                    scene.remove(particle);
-                    particles.splice(i, 1);
+            
+            class Obstacle {
+                constructor(y, emoji) {
+                     const options = { isStatic: true, isSensor: true, label: 'obstacle' };
+                     this.speed = (Math.random() * 2 + 1) * (Math.random() < 0.5 ? 1 : -1);
+                     const x = this.speed > 0 ? -30 : canvas.width + 30;
+                     this.body = Bodies.circle(x, y, 20, options);
+                     this.emoji = emoji;
+                     this.size = 40;
+                }
+                draw() {
+                    ctx.font = `${this.size}px serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.emoji, this.body.position.x, this.body.position.y);
+                }
+                update() {
+                    Body.translate(this.body, { x: this.speed, y: 0 });
+                    this.draw();
                 }
             }
-        }
 
-        // --- 스폰 함수 ---
-        function spawnObstacles() {
-            if (obstacleSpawnInterval) clearInterval(obstacleSpawnInterval);
-            obstacleSpawnInterval = setInterval(() => {
-                if (!gameActive) return;
+            function init() {
+                gameSettings = DIFFICULTIES[selectedDifficulty];
+                resizeCanvas();
                 
-                const obstacleGeometry = new THREE.BoxGeometry(6, 6, 6);
-                const obstacleMaterial = new THREE.MeshStandardMaterial({ map: obstacleTexture, color: 0xffffff });
-                const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-                obstacle.castShadow = true;
-                obstacle.userData.health = 3;
+                engine = Engine.create();
+                engine.world.gravity.y = gameSettings.gravity;
+                runner = Runner.create();
 
-                const healthLabel = createHealthLabel(obstacle.userData.health);
-                obstacle.add(healthLabel);
-                obstacle.userData.healthLabel = healthLabel;
+                const playerX = canvas.width / 4;
+                player = Bodies.circle(playerX, canvas.height / 2, 25, { 
+                    label: 'player', restitution: 0.3, friction: 0.05, frictionAir: 0.01,
+                });
+                Body.setPosition(player, { x: playerX, y: player.position.y });
+                World.add(engine.world, player);
 
-                obstacle.position.set((Math.random() - 0.5) * 16, 3, -80);
-                obstacles.push(obstacle);
-                scene.add(obstacle);
-            }, 1800);
-        }
-
-        function spawnItems() {
-             if (itemSpawnInterval) clearInterval(itemSpawnInterval);
-             itemSpawnInterval = setInterval(() => {
-                if (!gameActive) return;
-
-                const itemType = Math.random() < 0.5 ? 'power' : 'spread';
-                const itemColor = itemType === 'power' ? 0xff00ff : 0x00ffff;
-
-                const itemGeometry = new THREE.IcosahedronGeometry(1, 0);
-                const itemMaterial = new THREE.MeshStandardMaterial({ color: itemColor, emissive: itemColor, metalness: 0.6, roughness: 0.2 });
-                const item = new THREE.Mesh(itemGeometry, itemMaterial);
+                toilets = [];
+                obstacles = [];
+                score = 0;
+                gameOver = false;
+                frameCount = 0;
+                scoreEl.textContent = 0;
                 
-                item.userData.type = itemType;
-                item.position.set((Math.random() - 0.5) * 16, 1.5, -80);
+                if (selectedMode === 'timeAttack') {
+                    timeAttackTimer = 60 * 1000;
+                    timerEl.textContent = `남은 시간: 60.0`;
+                    timerEl.style.display = 'block';
+                } else {
+                    timerEl.style.display = 'none';
+                }
                 
-                items.push(item);
-                scene.add(item);
-            }, 8000);
-        }
-
-
-        // --- 액션 함수 ---
-        function shoot() {
-            if (!player) return;
-
-            switch (playerWeapon) {
-                case 'power':
-                    createBullet({ damage: 3, size: 0.8, color: 0xff00ff, velocity: new THREE.Vector3(0, 0, -bulletSpeed * 1.2) });
-                    break;
-                case 'spread':
-                    createBullet({ damage: 1, velocity: new THREE.Vector3(0, 0, -bulletSpeed) });
-                    createBullet({ damage: 1, velocity: new THREE.Vector3(-0.2, 0, -bulletSpeed) });
-                    createBullet({ damage: 1, velocity: new THREE.Vector3(0.2, 0, -bulletSpeed) });
-                    break;
-                default: // 'default'
-                    createBullet({ damage: 1 });
-                    break;
+                overlay.classList.add('hidden');
+                inGameUI.classList.remove('hidden');
+                
+                Events.on(engine, 'beforeUpdate', () => {
+                    Body.setPosition(player, { x: playerX, y: player.position.y });
+                });
+                Events.on(engine, 'afterUpdate', animate);
+                Events.on(engine, 'collisionStart', handleCollision);
+                Runner.run(runner, engine);
             }
-        }
 
-        function createBullet(options = {}) {
-            const { damage = 1, size = 0.2, color = 0xffff00, velocity = new THREE.Vector3(0, 0, -bulletSpeed) } = options;
-            const bulletGeometry = new THREE.SphereGeometry(size, 8, 8);
-            const bulletMaterial = new THREE.MeshBasicMaterial({ color });
-            const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
-            bullet.position.copy(player.position);
-            bullet.position.y += 1.5;
-            bullet.position.z -= 1;
-            bullet.userData.damage = damage;
-            bullet.userData.velocity = velocity;
-            bullets.push(bullet);
-            scene.add(bullet);
-        }
+            function animate() {
+                if (gameOver) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        function activatePowerUp(type) {
-            clearTimeout(powerUpTimeout);
-            playerWeapon = type;
-            weaponStatusElement.innerText = `${type} Shot!`;
-            powerUpTimeout = setTimeout(() => {
-                playerWeapon = 'default';
-                weaponStatusElement.innerText = '';
-            }, 10000);
-        }
+                ctx.save();
+                ctx.translate(player.position.x, player.position.y);
+                ctx.rotate(Math.min(Math.PI / 6, Math.max(-Math.PI / 6, player.velocity.y * 0.1)));
+                ctx.scale(-1, 1);
+                ctx.font = `50px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(selectedCharacter, 0, 0);
+                ctx.restore();
 
-        function createExplosion(position) {
-            const particleCount = 20;
-            const particleGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+                if (frameCount % gameSettings.interval === 0) {
+                    const y = Math.random() * (canvas.height - 400) + 200;
+                    toilets.push(new Toilet(canvas.width + 60, y));
+                    World.add(engine.world, toilets[toilets.length - 1].body);
+                }
+                
+                if ((selectedDifficulty === 'hard' || selectedDifficulty === 'crazy') && frameCount % 180 === 0) {
+                     const y = Math.random() * canvas.height;
+                     const emoji = Math.random() < 0.5 ? '🐳' : '🦈';
+                     const newObstacle = new Obstacle(y, emoji);
+                     obstacles.push(newObstacle);
+                     World.add(engine.world, newObstacle.body);
+                }
 
-            for (let i = 0; i < particleCount; i++) {
-                const particleMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(Math.random(), 1, 0.6), roughness: 0.5 });
-                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-                particle.position.copy(position);
-                particle.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5);
-                particle.userData.life = Math.random() * 30 + 30;
-                particles.push(particle);
-                scene.add(particle);
+                toilets.forEach((toilet, i) => {
+                    toilet.update();
+                    if (toilet.body.bodies[0].position.x < -100) {
+                        World.remove(engine.world, toilet.body);
+                        toilets.splice(i, 1);
+                    }
+                });
+                
+                obstacles.forEach((obstacle, i) => {
+                    obstacle.update();
+                    if(obstacle.body.position.x < -50 || obstacle.body.position.x > canvas.width + 50) {
+                        World.remove(engine.world, obstacle.body);
+                        obstacles.splice(i,1);
+                    }
+                });
+
+                if (player.position.y > canvas.height + 50 || player.position.y < -50) {
+                    endGame();
+                }
+
+                if (selectedMode === 'timeAttack') {
+                    timeAttackTimer -= runner.delta;
+                    timerEl.textContent = `남은 시간: ${(timeAttackTimer / 1000).toFixed(1)}`;
+                    if (timeAttackTimer <= 0) {
+                        timerEl.textContent = `남은 시간: 0.0`;
+                        endGame();
+                    }
+                }
+                
+                frameCount++;
             }
-        }
-
-        // --- 헬퍼 함수 ---
-        const objBox = new THREE.Box3();
-        function checkCollision(objA, objB, sizeB) {
-            if (!objA || !objB) return false;
-            const boxA = new THREE.Box3().setFromObject(objA);
-            const centerB = objB.position.clone();
-            objBox.setFromCenterAndSize(centerB, sizeB);
-            return boxA.intersectsBox(objBox);
-        }
-
-        function createHealthLabel(health) {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 128;
-            canvas.height = 64;
-            context.font = 'bold 48px Inter';
-            context.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            context.textAlign = 'center';
-            context.fillText(health, canvas.width / 2, canvas.height / 2 + 18);
-
-            const texture = new THREE.CanvasTexture(canvas);
-            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(3, 1.5, 1);
-            sprite.position.y = 4;
-            sprite.userData.canvas = canvas;
-            return sprite;
-        }
-
-        function updateHealthLabel(obstacle) {
-            const label = obstacle.userData.healthLabel;
-            const health = obstacle.userData.health;
-            const canvas = label.userData.canvas;
-            const context = canvas.getContext('2d');
             
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            context.fillText(Math.max(0, health), canvas.width / 2, canvas.height / 2 + 18);
-            label.material.map.needsUpdate = true;
-        }
-
-        // --- 게임 상태 관리 함수 ---
-        function startGame() {
-            menuContainer.style.display = 'none';
-            messageBox.style.display = 'none';
-            
-            [...obstacles, ...bullets, ...particles, ...items].forEach(obj => scene.remove(obj));
-            obstacles = []; bullets = []; particles = []; items = [];
-
-            score = 0;
-            scoreElement.innerText = score;
-            if (player) player.position.set(0, playerInitialY, 0);
-            playerVelocityY = 0;
-            clearTimeout(powerUpTimeout);
-            playerWeapon = 'default';
-            weaponStatusElement.innerText = '';
-            
-            gameActive = true;
-            spawnObstacles();
-            spawnItems();
-        }
-
-        function gameOver() {
-            gameActive = false;
-            clearInterval(obstacleSpawnInterval);
-            clearInterval(itemSpawnInterval);
-            messageBox.innerHTML = `Game Over!<br>Score: ${score}`;
-            messageBox.style.display = 'block';
-            startButton.innerText = '다시 시작';
-            menuContainer.style.display = 'flex';
-        }
-
-        // --- 이벤트 핸들러 ---
-        function onKeyDown(event) {
-            keyboard[event.keyCode] = true;
-            if (event.keyCode === 70 && gameActive) { // 'F' 키
-                shoot();
+            function handleCollision(event) {
+                event.pairs.forEach(pair => {
+                    const { bodyA, bodyB } = pair;
+                    const labels = [bodyA.label, bodyB.label];
+                    
+                    if (labels.includes('player') && labels.includes('obstacle')) {
+                        endGame();
+                    }
+                    
+                    if (labels.includes('player') && labels.includes('score')) {
+                        const sensorBody = bodyA.label === 'score' ? bodyA : bodyB;
+                        const parentToilet = toilets.find(t => t.scoreSensor === sensorBody);
+                        if (parentToilet && !parentToilet.passed && player.velocity.y > 0) {
+                            score++;
+                            scoreEl.textContent = score;
+                            parentToilet.passed = true;
+                        }
+                    }
+                });
             }
-        }
-        function onKeyUp(event) {
-            keyboard[event.keyCode] = false;
-        }
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        window.onload = init;
+
+            function endGame() {
+                if(gameOver) return;
+                gameOver = true;
+                Runner.stop(runner);
+                Events.off(engine, 'afterUpdate', animate);
+                Events.off(engine, 'collisionStart', handleCollision);
+                inGameUI.classList.add('hidden');
+                overlay.classList.remove('hidden');
+                gameOverMenu.classList.remove('hidden');
+                finalScoreEl.textContent = score;
+            }
+
+            function handleUserAction(e) {
+                e.preventDefault();
+                if (!gameOver) {
+                    Body.setVelocity(player, { x: 0, y: gameSettings.jump });
+                    Body.setAngularVelocity(player, -0.15);
+                }
+            }
+            
+            function populateCharacterSelect() {
+                characterGrid.innerHTML = '';
+                CHARACTERS.forEach(char => {
+                    const charButton = document.createElement('button');
+                    charButton.className = 'text-6xl p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors';
+                    charButton.textContent = char;
+                    charButton.onclick = () => {
+                        selectedCharacter = char;
+                        characterSelect.classList.add('hidden');
+                        init();
+                    };
+                    characterGrid.appendChild(charButton);
+                });
+            }
+
+            modeSelectButton.addEventListener('click', () => {
+                mainMenu.classList.add('hidden');
+                modeSelect.classList.remove('hidden');
+                modeSelect.classList.add('flex');
+            });
+
+            modeButtons.forEach(button => {
+                button.addEventListener('click', e => {
+                    selectedMode = e.target.dataset.mode;
+                    modeSelect.classList.add('hidden');
+                    modeSelect.classList.remove('flex');
+                    difficultySelect.classList.remove('hidden');
+                    difficultySelect.classList.add('flex');
+                });
+            });
+
+            difficultyButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    selectedDifficulty = e.target.dataset.difficulty;
+                    difficultySelect.classList.add('hidden');
+                    difficultySelect.classList.remove('flex');
+                    characterSelect.classList.remove('hidden');
+                    characterSelect.classList.add('flex');
+                });
+            });
+
+            restartButton.addEventListener('click', () => {
+                gameOverMenu.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+            });
+            
+            backToMainFromMode.addEventListener('click', () => {
+                modeSelect.classList.add('hidden');
+                modeSelect.classList.remove('flex');
+                mainMenu.classList.remove('hidden');
+            });
+
+            backToModeButton.addEventListener('click', () => {
+                difficultySelect.classList.add('hidden');
+                difficultySelect.classList.remove('flex');
+                modeSelect.classList.remove('hidden');
+                modeSelect.classList.add('flex');
+            });
+
+            backToDifficultyButton.addEventListener('click', () => {
+                characterSelect.classList.add('hidden');
+                characterSelect.classList.remove('flex');
+                difficultySelect.classList.remove('hidden');
+                difficultySelect.classList.add('flex');
+            });
+            
+            helpButton.addEventListener('click', () => { helpOverlay.style.display = 'flex'; });
+            closeHelpButton.addEventListener('click', () => { helpOverlay.style.display = 'none'; });
+
+            canvas.addEventListener('mousedown', handleUserAction);
+            canvas.addEventListener('touchstart', handleUserAction);
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') handleUserAction(e);
+            });
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            populateCharacterSelect();
+            createBubbles();
+        });
     </script>
 </body>
 </html>
