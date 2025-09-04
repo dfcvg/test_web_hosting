@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>동물 쌓기 게임</title>
+    <!-- Matter.js 물리 엔진 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+            font-family: 'Nanum Pen Script', cursive;
+            overflow: hidden;
+            touch-action: none; /* 모바일 터치 스크롤 방지 */
+        }
+
+        .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            /* 높이는 뷰포트 높이에 맞춰 조정, 최대 800px */
+            height: 90vh;
+            max-height: 800px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #87CEEB, #d8f2fd);
+            border-radius: 20px;
+        }
+        
+        #world-view {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s ease-out;
+        }
+
+        /* 게임 객체 스타일 */
+        .matter-body {
+            position: absolute;
+            top: 0;
+            left: 0;
+            will-change: transform; /* 성능 최적화 */
+            pointer-events: none; /* 클릭 이벤트 방지 */
+        }
+        
+        .matter-body img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 이미지가 왜곡되지 않도록 함 */
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.4));
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: #333;
+            text-align: center;
+        }
+
+        #start-screen, #game-over-screen {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(5px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        h1 {
+            font-size: 4rem;
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        p {
+            font-size: 1.8rem;
+            margin: 0;
+        }
+        
+        .button {
+            padding: 15px 30px;
+            font-size: 2rem;
+            font-family: 'Nanum Pen Script', cursive;
+            cursor: pointer;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            border-radius: 15px;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 5px 0 #2980b9;
+        }
+
+        .button:hover {
+            background-color: #2980b9;
+        }
+        
+        .button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #2980b9;
+        }
+
+        #game-over-screen {
+            display: none; /* 초기에는 숨김 */
+        }
+        
+        #game-ui {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            visibility: hidden; /* 게임 시작 전에는 숨김 */
+        }
+
+        #next-animal-preview {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            opacity: 0.9;
+            text-align: center;
+        }
+
+        #next-animal-preview-text {
+            color: white;
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        #next-animal-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.4));
+        }
+
+        #timer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 10px;
+            width: 100%;
+            background-color: #2ecc71;
+            transform-origin: left;
+            transition: transform 0.1s linear;
+            z-index: 1;
+        }
+
+        #controls-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 5;
+            visibility: hidden; /* 게임 시작 전 숨김 */
+        }
+
+        .control-button {
+            width: 60px;
+            height: 60px;
+            font-size: 2rem;
+            border-radius: 50%;
+            border: 3px solid white;
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .control-button:active {
+            background-color: rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <div id="game-container">
+            <div id="world-view"></div>
+        </div>
+
+        <div class="ui-overlay" id="start-screen">
+            <h1>동물 쌓기</h1>
+            <p>이제 동물들이<br>절대 밀리지 않아요!</p>
+            <button class="button" id="start-button">시작하기</button>
+        </div>
+
+        <div class="ui-overlay" id="game-over-screen">
+            <h1>게임 오버!</h1>
+            <p id="final-score">최종 점수: 0</p>
+            <button class="button" id="restart-button">다시 시작</button>
+        </div>
+        
+        <div id="game-ui">
+            <div id="score">점수: 0</div>
+        </div>
+        
+        <div id="next-animal-preview">
+            <div id="next-animal-preview-text">다음 동물:</div>
+            <img id="next-animal-image" src="" alt="Next animal">
+        </div>
+
+        <div id="controls-container">
+            <button class="control-button" id="move-left">⬅️</button>
+            <button class="control-button" id="rotate-button">🔄</button>
+            <button class="control-button" id="drop-button">🔽</button>
+            <button class="control-button" id="move-right">➡️</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM 요소 가져오기 ---
+            const gameContainer = document.getElementById('game-container');
+            const worldView = document.getElementById('world-view');
+            const startScreen = document.getElementById('start-screen');
+            const gameOverScreen = document.getElementById('game-over-screen');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            const gameUi = document.getElementById('game-ui');
+            const scoreDisplay = document.getElementById('score');
+            const finalScoreDisplay = document.getElementById('final-score');
+            const nextAnimalImage = document.getElementById('next-animal-image');
+            const controlsContainer = document.getElementById('controls-container');
+
+            // --- Matter.js 모듈 가져오기 ---
+            const { Engine, Runner, World, Bodies, Body, Events, Composite, Sleeping, Vertices, Bounds } = Matter;
+
+            // --- 게임 설정 변수 ---
+            let engine, world, runner;
+            let gameWidth = gameContainer.clientWidth;
+            let gameHeight = gameContainer.clientHeight;
+            const DROP_TIMER_SECONDS = 5;
+
+            let score = 0;
+            let isGameOver = true;
+            let currentAnimalBody = null;
+            let nextAnimal = null;
+            let cameraY = 0;
+            let isWaitingForSettle = false;
+            
+            const bodyElementMap = new Map();
+            let dropInterval;
+            let checkBodyExistsInterval;
+
+            // --- 동물 데이터 정의 (SVG 기반의 정교한 Vertex 사용) ---
+            const animalData = [
+                {
+                    name: '코끼리', size: 120, mass: 25,
+                    imgSrc: 'https://svgsilh.com/svg/304991.svg',
+                    vertices: '50 0 80 5 100 30 95 90 85 100 75 90 50 85 35 90 25 100 15 90 5 50 15 40 30 40 40 20'
+                },
+                {
+                    name: '기린', size: 160, mass: 12,
+                    imgSrc: 'https://svgsilh.com/svg/304995.svg',
+                    vertices: '80 0 90 0 90 20 70 50 70 80 60 100 50 100 50 80 60 80 60 50'
+                },
+    
+                {
+                    name: '무스', size: 120, mass: 16,
+                    imgSrc: 'https://svgsilh.com/svg/307204.svg',
+                    vertices: '20 0 40 20 0 20 45 30 60 40 80 50 90 100 10 100 20 50 40 40 55 30 60 20 100 20 80 0'
+                }
+            ];
+            
+            // --- 게임 초기화 함수 ---
+            function init() {
+                if (engine) {
+                    World.clear(engine.world);
+                    Engine.clear(engine);
+                    if (runner) Runner.stop(runner);
+                    Array.from(worldView.getElementsByClassName('matter-body')).forEach(el => el.remove());
+                    bodyElementMap.clear();
+                }
+
+                engine = Engine.create({ gravity: { y: 1.2 } });
+                world = engine.world;
+                
+                runner = Runner.create();
+                Runner.run(runner, engine);
+                
+                const ground = Bodies.rectangle(gameWidth / 2, gameHeight - 20, gameWidth * 0.8, 40, { 
+                    isStatic: true, label: 'ground'
+                });
+                Composite.add(world, [ground]);
+
+                cameraY = 0;
+                worldView.style.transform = `translateY(0px)`;
+                requestAnimationFrame(syncDomWithPhysics);
+                
+                score = 0;
+                isGameOver = false;
+                updateScore();
+                
+                startScreen.classList.add('hidden');
+                gameOverScreen.style.display = 'none';
+                gameUi.style.visibility = 'visible';
+                controlsContainer.style.visibility = 'visible';
+
+                nextAnimal = getRandomAnimal();
+                spawnAnimal();
+                addControls();
+                addEventListeners();
+            }
+
+            // --- 카메라 업데이트 함수 ---
+            function updateCamera() {
+                const staticAnimals = Composite.allBodies(world).filter(b => b.isStatic && b.customData);
+                if (staticAnimals.length === 0) return;
+
+                let highestPoint = gameHeight;
+                staticAnimals.forEach(body => {
+                    if (body.bounds.min.y < highestPoint) {
+                        highestPoint = body.bounds.min.y;
+                    }
+                });
+
+                const cameraThreshold = gameHeight * 0.4;
+                if (highestPoint < cameraThreshold) {
+                    const targetY = cameraThreshold - highestPoint;
+                    cameraY += (targetY - cameraY) * 0.05;
+                    worldView.style.transform = `translateY(${cameraY}px)`;
+                }
+            }
+
+            // --- 물리 엔진과 DOM 동기화 ---
+            function syncDomWithPhysics() {
+                const bodies = Composite.allBodies(world);
+                for (const body of bodies) {
+                    if (!bodyElementMap.has(body.id)) {
+                        if (body.isStatic && !body.label) continue;
+                        
+                        const element = document.createElement('div');
+                        element.classList.add('matter-body');
+                        
+                        if (body.label === 'ground') {
+                            const { min, max } = body.bounds;
+                            element.style.width = `${max.x - min.x}px`;
+                            element.style.height = `${max.y - min.y}px`;
+                            element.style.backgroundColor = '#8B4513';
+                            element.style.border = '5px solid #5C2F0B';
+                            element.style.borderRadius = '10px';
+                        } else if (body.customData) {
+                            const { imgSrc } = body.customData;
+                            const { min, max } = body.bounds;
+                            const width = max.x - min.x;
+                            const height = max.y - min.y;
+                            
+                            element.style.width = `${width}px`;
+                            element.style.height = `${height}px`;
+
+                            element.innerHTML = `<img src="${imgSrc}" alt="${body.customData.name}" onerror="this.style.display='none'">`;
+                        } else {
+                            continue;
+                        }
+                        
+                        bodyElementMap.set(body.id, element);
+                        worldView.appendChild(element);
+                    }
+                }
+                
+                for (const [id, element] of bodyElementMap.entries()) {
+                    if (!bodies.find(b => b.id === id)) {
+                        element.remove();
+                        bodyElementMap.delete(id);
+                    }
+                }
+
+                for (const body of bodies) {
+                    if (bodyElementMap.has(body.id)) {
+                        const element = bodyElementMap.get(body.id);
+                        const { x, y } = body.position;
+                        const angle = body.angle;
+                        element.style.transform = `translate(${x - element.offsetWidth / 2}px, ${y - element.offsetHeight / 2}px) rotate(${angle}rad)`;
+                    }
+                }
+                
+                if (!isGameOver) {
+                    updateCamera();
+                    requestAnimationFrame(syncDomWithPhysics);
+                }
+            }
+
+            // --- 동물 생성 함수 ---
+            function spawnAnimal() {
+                if (isGameOver) return;
+                                
+                const animalInfo = nextAnimal;
+                nextAnimal = getRandomAnimal();
+                nextAnimalImage.src = nextAnimal.imgSrc;
+
+                const { size, mass, vertices: path } = animalInfo;
+                const spawnX = gameWidth / 2;
+                const spawnY = (size / 2 + 20) - cameraY;
+                
+                const vertices = Vertices.fromPath(path);
+                const bounds = Bounds.create(vertices);
+
+                const options = {
+                    restitution: 0.1, 
+                    friction: 0.9,
+                    density: 0.01,
+                    isSleeping: true, 
+                    customData: animalInfo
+                };
+
+                let body = Bodies.fromVertices(spawnX, spawnY, [vertices], options);
+                
+                if (body.parts.length > 2) { 
+                    World.remove(world, body); 
+                    body = Body.create({
+                        parts: body.parts.slice(1), 
+                        ...options
+                    });
+                    Body.setMass(body, mass);
+                }
+
+                const scaleFactor = size / (bounds.max.y - bounds.min.y);
+                Body.scale(body, scaleFactor, scaleFactor);
+                Body.setMass(body, mass);
+
+                currentAnimalBody = body;
+                Composite.add(world, body);
+                startDropTimer();
+            }
+
+            // --- 동물 떨어뜨리기 타이머 ---
+            function startDropTimer() {
+                let timeLeft = DROP_TIMER_SECONDS;
+                const timerBar = document.createElement('div');
+                timerBar.id = 'timer-bar';
+                
+                if (checkBodyExistsInterval) clearInterval(checkBodyExistsInterval);
+                checkBodyExistsInterval = setInterval(() => {
+                    if (!currentAnimalBody) {
+                        clearInterval(checkBodyExistsInterval);
+                        return;
+                    }
+                    const animalElement = bodyElementMap.get(currentAnimalBody.id);
+                    if (animalElement) {
+                        animalElement.appendChild(timerBar);
+                        clearInterval(checkBodyExistsInterval);
+                    }
+                }, 10);
+
+                dropInterval = setInterval(() => {
+                    timeLeft -= 0.1;
+                    const percentage = (timeLeft / DROP_TIMER_SECONDS);
+                    timerBar.style.transform = `scaleX(${percentage})`;
+                    timerBar.style.backgroundColor = percentage > 0.5 ? '#2ecc71' : percentage > 0.2 ? '#f1c40f' : '#e74c3c';
+                    if (timeLeft <= 0) dropAnimal();
+                }, 100);
+            }
+
+            // --- 동물 떨어뜨리기 ---
+            function dropAnimal() {
+                if (!currentAnimalBody || isGameOver) return;
+                clearInterval(dropInterval);
+                if (checkBodyExistsInterval) clearInterval(checkBodyExistsInterval);
+                
+                const animalElement = bodyElementMap.get(currentAnimalBody.id);
+                animalElement?.querySelector('#timer-bar')?.remove();
+
+                Sleeping.set(currentAnimalBody, false);
+                isWaitingForSettle = true;
+
+                const heightBonus = Math.floor((gameHeight - (currentAnimalBody.position.y - cameraY)) / 100);
+                score += 10 + heightBonus;
+                updateScore();
+                
+                currentAnimalBody = null;
+            }
+
+            function getRandomAnimal() {
+                return {...animalData[Math.floor(Math.random() * animalData.length)]};
+            }
+            
+            function updateScore() {
+                scoreDisplay.textContent = `점수: ${score}`;
+            }
+
+            function checkBounds() {
+                if (!currentAnimalBody) return;
+                const { min, max } = currentAnimalBody.bounds;
+                if (min.x < 0) Body.setPosition(currentAnimalBody, { x: (max.x - min.x)/2, y: currentAnimalBody.position.y });
+                if (max.x > gameWidth) Body.setPosition(currentAnimalBody, { x: gameWidth - (max.x - min.x)/2, y: currentAnimalBody.position.y });
+            }
+
+            function addControls() {
+                document.addEventListener('keydown', handleKeyPress);
+                let touchStartX = 0, bodyStartX = 0;
+                gameContainer.addEventListener('touchstart', (e) => {
+                    if (e.target.classList.contains('control-button')) return;
+                    if (isGameOver || !currentAnimalBody) return;
+                    touchStartX = e.touches[0].clientX;
+                    bodyStartX = currentAnimalBody.position.x;
+                }, { passive: true });
+
+                gameContainer.addEventListener('touchmove', (e) => {
+                    if (isGameOver || !currentAnimalBody) return;
+                    e.preventDefault();
+                    const deltaX = e.touches[0].clientX - touchStartX;
+                    const currentY = currentAnimalBody.position.y;
+                    Body.setPosition(currentAnimalBody, { x: bodyStartX + deltaX, y: currentY });
+                    checkBounds();
+                }, { passive: false });
+
+                let lastTap = 0;
+                gameContainer.addEventListener('touchend', (e) => {
+                    if (e.target.classList.contains('control-button')) return;
+                    if (isGameOver || !currentAnimalBody) return;
+                    const currentTime = new Date().getTime();
+                    if (currentTime - lastTap < 300) dropAnimal();
+                    lastTap = currentTime;
+                });
+                document.getElementById('move-left').onclick = () => { if (!isGameOver && currentAnimalBody) { Body.translate(currentAnimalBody, { x: -20, y: 0 }); checkBounds(); } };
+                document.getElementById('move-right').onclick = () => { if (!isGameOver && currentAnimalBody) { Body.translate(currentAnimalBody, { x: 20, y: 0 }); checkBounds(); } };
+                document.getElementById('rotate-button').onclick = () => { if (!isGameOver && currentAnimalBody) Body.rotate(currentAnimalBody, -Math.PI / 12); };
+                document.getElementById('drop-button').onclick = () => { if (!isGameOver && currentAnimalBody) dropAnimal(); };
+            }
+
+            function handleKeyPress(e) {
+                if (isGameOver || !currentAnimalBody) return;
+                switch (e.key) {
+                    case 'ArrowLeft': Body.translate(currentAnimalBody, { x: -20, y: 0 }); break;
+                    case 'ArrowRight': Body.translate(currentAnimalBody, { x: 20, y: 0 }); break;
+                    case 'ArrowUp':
+                    case ' ': 
+                        Body.rotate(currentAnimalBody, -Math.PI / 12); 
+                        e.preventDefault(); 
+                        break;
+                    case 'ArrowDown': dropAnimal(); break;
+                }
+                checkBounds();
+            }
+
+            function addEventListeners() {
+                let settleCounter = 0;
+                Events.on(engine, 'afterUpdate', () => {
+                    if (isGameOver) return;
+                    
+                    // --- 게임오버 체크 ---
+                    const dynamicAnimals = Composite.allBodies(world).filter(body => 
+                        !body.isStatic && body.customData
+                    );
+
+                    for (const body of dynamicAnimals) {
+                        if (body.bounds.min.y > gameHeight + cameraY) {
+                            handleGameOver();
+                            return; 
+                        }
+                    }
+
+                    // --- 동물 안정화 및 다음 동물 스폰 체크 ---
+                    if (isWaitingForSettle) {
+                        let totalSpeed = 0;
+                        dynamicAnimals.forEach(body => {
+                            totalSpeed += body.speed + body.angularSpeed;
+                        });
+
+                        if (totalSpeed < 0.1) {
+                            settleCounter++;
+                        } else {
+                            settleCounter = 0;
+                        }
+
+                        if (settleCounter > 15) { // 약 0.25초간 안정 상태 유지
+                            isWaitingForSettle = false;
+                            settleCounter = 0;
+                            
+                            // *** 핵심 수정: 여기서 모든 동물을 고정시킵니다. ***
+                            const allBodies = Composite.allBodies(world);
+                            for (const body of allBodies) {
+                                if (body.customData && !body.isStatic) {
+                                    Body.setStatic(body, true);
+                                }
+                            }
+                            
+                            spawnAnimal();
+                        }
+                    }
+                });
+            }
+            
+            function handleGameOver() {
+                if (isGameOver) return;
+                isGameOver = true;
+                Runner.stop(runner);
+                clearInterval(dropInterval);
+                if (checkBodyExistsInterval) clearInterval(checkBodyExistsInterval);
+                document.removeEventListener('keydown', handleKeyPress);
+                gameUi.style.visibility = 'hidden';
+                controlsContainer.style.visibility = 'hidden';
+                finalScoreDisplay.textContent = `최종 점수: ${score}`;
+                gameOverScreen.style.display = 'flex';
+            }
+            window.addEventListener('resize', () => { if (isGameOver) { gameWidth = gameContainer.clientWidth; gameHeight = gameContainer.clientHeight; } });
+            startButton.addEventListener('click', init);
+            restartButton.addEventListener('click', init);
+        });
+    </script>
+</body>
+</html>
+
