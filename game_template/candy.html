@@ -70,7 +70,9 @@
             </div>
         </div>
 
-        <div id="canvas-container" class="w-full max-w-xl aspect-square rounded-xl shadow-2xl relative"></div>
+        <div id="canvas-container" class="w-full max-w-xl aspect-square rounded-xl shadow-2xl relative">
+            <div id="combo-text" class="absolute inset-0 flex items-center justify-center text-6xl font-bold text-white opacity-0 pointer-events-none z-10" style="text-shadow: 3px 3px 6px rgba(0,0,0,0.7);"></div>
+        </div>
     </main>
     
     <!-- Game Over Modal -->
@@ -160,7 +162,7 @@
         ];
 
         // --- Game State ---
-        let board = [], score = 0, movesLeft = 0, isProcessing = false, selectedCandy = null, currentMission = null, currentLevel = 0;
+        let board = [], score = 0, movesLeft = 0, isProcessing = false, selectedCandy = null, currentMission = null, currentLevel = 0, comboCount = 0;
         
         // --- Tutorial State ---
         let tutorialStep = 0;
@@ -356,6 +358,30 @@
             return vec;
         }
 
+        function showComboEffect(count) {
+            if (count < 2) return;
+
+            const comboEl = document.getElementById('combo-text');
+            comboEl.textContent = `${count}x 콤보!`;
+            
+            // Remove previous animation classes and hide element
+            comboEl.classList.remove('text-pop', 'opacity-100');
+            comboEl.classList.add('opacity-0');
+
+            // This is a trick to restart CSS animations
+            void comboEl.offsetWidth;
+
+            // Apply new animation
+            comboEl.classList.add('text-pop', 'opacity-100');
+            comboEl.classList.remove('opacity-0');
+
+            // Set a timer to hide it again
+            setTimeout(() => {
+                comboEl.classList.remove('opacity-100');
+                comboEl.classList.add('opacity-0');
+            }, 800);
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
@@ -442,6 +468,7 @@
             
             movesLeft--;
             updateUI();
+            comboCount = 1;
             
             if (candy1.isSpecial && candy2.isSpecial) {
                 await handleSpecialCombination(candy1, candy2);
@@ -459,6 +486,7 @@
                  await processLoop(matchInfo.matches, candy1);
             } else { // No match, swap back
                 movesLeft++; // Revert move count
+                comboCount = 0;
                 updateUI();
                 board[face][r1][c1] = candy1;
                 board[face][r2][c2] = candy2;
@@ -471,10 +499,17 @@
         
         async function processLoop(initialMatches, swappedCandy) {
             let matches = initialMatches;
+            let isFirstCascade = true;
+
             while(matches.length > 0) {
+                if (!isFirstCascade) {
+                    comboCount++;
+                    showComboEffect(comboCount);
+                }
+
                 let { candiesToDestroy, specialCreated } = processMatches(matches, swappedCandy);
                 
-                score += candiesToDestroy.size * 10;
+                score += candiesToDestroy.size * 10 * comboCount;
                 updateMission(candiesToDestroy);
                 updateUI();
                 
@@ -497,6 +532,7 @@
                 
                 matches = findMatches();
                 swappedCandy = null; // Subsequent cascades are not player-initiated
+                isFirstCascade = false;
             }
             isProcessing = false;
             checkGameOver();
