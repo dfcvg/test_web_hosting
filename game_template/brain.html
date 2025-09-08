@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>까다로운 브레인 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            touch-action: none;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        .shake { animation: shake 0.5s ease-in-out; }
+        .draggable { cursor: grab; user-select: none; position: absolute; }
+        .dragging { cursor: grabbing; z-index: 50; }
+        .level-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .level-btn:disabled .level-lock { display: block; }
+        .level-lock { display: none; }
+    </style>
+</head>
+<body class="bg-blue-100 flex items-center justify-center min-h-screen">
+
+    <div id="game-container" class="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-6 text-center transition-all duration-500">
+        
+        <div id="start-screen">
+            <h1 class="text-4xl font-bold text-blue-600 mb-4">종합 두뇌 게임</h1>
+            <p class="text-gray-600 mb-8">20개의 미니게임으로 당신의 뇌를 시험하세요!</p>
+            <button id="start-button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-4 rounded-xl text-2xl transition-transform transform hover:scale-105">
+                도전하기
+            </button>
+        </div>
+        
+        <div id="level-select-screen" class="hidden">
+            <h1 class="text-3xl font-bold text-blue-600 mb-6">레벨 선택</h1>
+            <div id="level-grid" class="grid grid-cols-4 gap-4">
+                <!-- 레벨 버튼이 여기에 동적으로 생성됩니다. -->
+            </div>
+             <button id="back-to-menu-button" class="mt-6 w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">
+                처음으로
+            </button>
+        </div>
+
+        <div id="game-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                 <button id="back-to-levels-button" class="text-2xl">⬅️</button>
+                <span class="text-xl font-bold text-gray-500">레벨 <span id="level-indicator">1</span></span>
+                <span></span>
+            </div>
+            <h2 id="question" class="text-3xl font-bold text-gray-800 mb-6 min-h-[84px] flex items-center justify-center leading-snug"></h2>
+            <div id="puzzle-area" class="relative w-full h-80 bg-gray-100 rounded-xl border-4 border-gray-200 overflow-hidden flex justify-center items-center flex-wrap gap-4 p-4"></div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 text-center shadow-xl transform transition-all scale-95">
+            <h3 class="text-4xl font-bold text-green-500 mb-4">성공!</h3>
+            <p class="text-gray-700 mb-6 text-xl">정말 대단해요!</p>
+            <div class="flex gap-4">
+                 <button id="select-level-button" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl text-xl">레벨 선택</button>
+                <button id="next-level-button" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl text-xl">다음 레벨</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="game-complete-screen" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 text-center shadow-xl">
+            <h3 class="text-4xl font-bold text-yellow-500 mb-4">모든 레벨 클리어!</h3>
+            <p class="text-gray-700 mb-6 text-xl">당신은 브레인 마스터!</p>
+            <button id="restart-button" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl text-2xl">
+                처음부터 다시하기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const startScreen = document.getElementById('start-screen');
+        const levelSelectScreen = document.getElementById('level-select-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const startButton = document.getElementById('start-button');
+        const levelGrid = document.getElementById('level-grid');
+        const backToMenuButton = document.getElementById('back-to-menu-button');
+        const backToLevelsButton = document.getElementById('back-to-levels-button');
+        const levelIndicator = document.getElementById('level-indicator');
+        const questionEl = document.getElementById('question');
+        const puzzleArea = document.getElementById('puzzle-area');
+        const successModal = document.getElementById('success-modal');
+        const selectLevelButton = document.getElementById('select-level-button');
+        const nextLevelButton = document.getElementById('next-level-button');
+        const gameCompleteScreen = document.getElementById('game-complete-screen');
+        const restartButton = document.getElementById('restart-button');
+
+        // --- Game State ---
+        let currentLevelIndex = 0;
+        let unlockedLevel = 1; 
+        let activeDraggable = null;
+        let offsetX, offsetY;
+        let patienceTimer;
+
+        const TOTAL_LEVELS = 20;
+
+        // --- All Levels Data ---
+        const levels = [
+            // 1-7 (Existing)
+            { question: "이 중에서 다른 이모지는 무엇일까요?", setup: setupFindDifferent(['🐼', '🐼', '🐼', '🐻', '🐼', '🐼', '🐼', '🐼'], '🐻') },
+            { question: "토끼에게 당근을 주세요.", setup: setupDragAndDrop('🐰', '🥕') },
+            { question: "코코넛을 따려면 나무를 흔들어주세요.", setup: setupShake('🌴', '🥥'), cleanup: () => window.removeEventListener('devicemotion', handleShake) },
+            { question: "가장 <span id='trick-word' class='text-red-500 hover:text-red-700 cursor-pointer'>빨간색</span> 과일을 터치하세요.", setup: setupTrickWord(['🍇', '🍌', '🍈', '🍍'], 'trick-word') },
+            { question: "글자 '파란색'을 누르세요.", setup: setupColorTextTrick() },
+            { question: "티셔츠에 있는 구멍은 총 몇 개일까요?", setup: setupTshirtHoles() },
+            { question: "고양이가 배고파요. 숨겨진 쥐를 찾아주세요.", setup: setupHiddenObject('🐈', '🐁', '📦') },
+            // 8-20 (New)
+            { question: "가장 큰 숫자를 만들어 보세요.", setup: setupMakeLargestNumber(['7', '1', '9'], '971') },
+            { question: "이 문장 어딘가에 숨어있는 💎을 찾으세요.", setup: () => { puzzleArea.innerHTML = ''; document.getElementById('question').innerHTML = "이 문장 어딘가에 숨어있는 <span class='cursor-pointer' onclick='completeLevel()'>💎</span>을 찾으세요."; } },
+            { question: "어둡게 만들어 주세요.", setup: setupDragAway('☀️') },
+            { question: "5초 동안 아무것도 만지지 마세요.", setup: () => { puzzleArea.innerHTML = '<div class="text-2xl">가만히...</div>'; patienceTimer = setTimeout(completeLevel, 5000); puzzleArea.addEventListener('click', handleWrongAnswer); }, cleanup: () => { clearTimeout(patienceTimer); puzzleArea.removeEventListener('click', handleWrongAnswer); } },
+            { question: "상자를 열려면 '열려라참깨'를 입력하세요.", setup: setupPasswordInput('열려라참깨', '📦') },
+            { question: "가장 무거운 것을 고르세요.", setup: setupFindDifferent(['🎈', '🐘', '☁️'], '🐘', false) },
+            { question: "쥐가 탈출하도록 도와주세요 🐁", setup: setupEscape('🐁') },
+            { question: "사과는 모두 몇 개일까요?", setup: setupHiddenCount('🍎', 4, ['2', '3', '4']) },
+            { question: "다음 순서에 올 이모지는? 🐶→🦴, 🐰→🥕, 🐵→?", setup: setupPattern(['🍌', '🧀', '🌳'], '🍌') },
+            { question: "꽃을 피워주세요.", setup: setupCombine('🌧️', '🌱', '🌸') },
+            { question: "가장 큰 <span id='trick-circle' class='cursor-pointer'>원</span>을 터치하세요.", setup: setupTrickWord(['⚫', '🔵', '🔴'], 'trick-circle') },
+            { question: "초록 버튼을 누르기 전에, 파란 버튼을 먼저 누르세요.", setup: setupSequenceButtons() },
+            { question: "게임을 끝내려면 이 레벨의 숫자를 누르세요.", setup: () => { puzzleArea.innerHTML = '<div class="text-4xl">🤔</div>'; levelIndicator.parentElement.classList.add('cursor-pointer'); levelIndicator.parentElement.onclick = () => { completeLevel(); }; }, cleanup: () => { levelIndicator.parentElement.classList.remove('cursor-pointer'); levelIndicator.parentElement.onclick = null; } }
+        ];
+        
+        // --- Screen Management ---
+        function showScreen(screen) {
+            [startScreen, levelSelectScreen, gameScreen, gameCompleteScreen].forEach(s => s.classList.add('hidden'));
+            screen.classList.remove('hidden');
+        }
+
+        function showLevelSelect() {
+            levelGrid.innerHTML = '';
+            for (let i = 1; i <= TOTAL_LEVELS; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'level-btn h-16 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center text-2xl relative transition-all';
+                if (i <= unlockedLevel) {
+                    btn.textContent = i;
+                    btn.onclick = () => loadLevel(i - 1);
+                } else {
+                    btn.innerHTML = `<span>${i}</span><span class="level-lock absolute text-4xl">🔒</span>`;
+                    btn.disabled = true;
+                }
+                levelGrid.appendChild(btn);
+            }
+            showScreen(levelSelectScreen);
+        }
+
+        // --- Game Flow ---
+        function loadLevel(levelIndex) {
+            if (levels[currentLevelIndex]?.cleanup) levels[currentLevelIndex].cleanup();
+            currentLevelIndex = levelIndex;
+            if (levelIndex >= levels.length) {
+                showGameComplete();
+                return;
+            }
+            levelIndicator.textContent = levelIndex + 1;
+            questionEl.innerHTML = levels[levelIndex].question;
+            puzzleArea.innerHTML = ''; 
+            levels[levelIndex].setup();
+            showScreen(gameScreen);
+        }
+
+        function completeLevel() {
+            unlockedLevel = Math.max(unlockedLevel, currentLevelIndex + 2);
+            if (currentLevelIndex >= levels.length -1) {
+                nextLevelButton.classList.add('hidden');
+            } else {
+                nextLevelButton.classList.remove('hidden');
+            }
+            successModal.classList.remove('hidden');
+            setTimeout(() => successModal.querySelector('div').classList.remove('scale-95'), 10);
+        }
+
+        function nextLevel() {
+            successModal.classList.add('hidden');
+            successModal.querySelector('div').classList.add('scale-95');
+            loadLevel(currentLevelIndex + 1);
+        }
+
+        function handleWrongAnswer() {
+            if (patienceTimer) clearTimeout(patienceTimer);
+            gameContainer.classList.add('shake');
+            setTimeout(() => gameContainer.classList.remove('shake'), 500);
+        }
+
+        // --- Setup Functions for Levels ---
+        function setupFindDifferent(items, answer, shuffle = true) {
+            return () => {
+                if (shuffle) items.sort(() => Math.random() - 0.5);
+                items.forEach(emoji => {
+                    const div = document.createElement('div');
+                    div.textContent = emoji;
+                    div.className = "text-5xl cursor-pointer transition-transform hover:scale-125";
+                    div.onclick = () => (emoji === answer) ? completeLevel() : handleWrongAnswer();
+                    puzzleArea.appendChild(div);
+                });
+            };
+        }
+
+        function setupDragAndDrop(targetEmoji, draggableEmoji) {
+            return () => {
+                const target = document.createElement('div');
+                target.textContent = targetEmoji;
+                target.className = "text-8xl absolute bottom-8 right-8";
+                const draggable = document.createElement('div');
+                draggable.textContent = draggableEmoji;
+                draggable.className = "draggable text-7xl top-8 left-8";
+                puzzleArea.append(target, draggable);
+                makeDraggable(draggable, () => {
+                    const targetRect = target.getBoundingClientRect();
+                    const draggableRect = draggable.getBoundingClientRect();
+                    const isOverlapping = !(draggableRect.right < targetRect.left || draggableRect.left > targetRect.right || draggableRect.bottom < targetRect.top || draggableRect.top > targetRect.bottom);
+                    if (isOverlapping) completeLevel();
+                });
+            };
+        }
+        
+        function setupShake(treeEmoji, fruitEmoji) {
+            return () => {
+                const tree = document.createElement('div');
+                tree.textContent = treeEmoji;
+                tree.className = 'text-9xl absolute bottom-0 right-1/2 translate-x-1/2';
+                const fruit = document.createElement('div');
+                fruit.id = 'fruit';
+                fruit.textContent = fruitEmoji;
+                fruit.className = 'text-4xl absolute -top-4 -right-4 transition-all duration-1000';
+                tree.appendChild(fruit);
+                puzzleArea.appendChild(tree);
+                window.addEventListener('devicemotion', handleShake);
+            }
+        }
+        
+        function handleShake(event) {
+            if (event.acceleration.x > 15 || event.acceleration.y > 15) {
+                const fruit = document.getElementById('fruit');
+                if (fruit) {
+                    fruit.style.transform = 'translateY(150px)';
+                    setTimeout(() => {
+                        completeLevel();
+                        window.removeEventListener('devicemotion', handleShake);
+                    }, 1000);
+                }
+            }
+        }
+
+        function setupTrickWord(items, trickWordId) {
+            return () => {
+                items.forEach(emoji => {
+                    const div = document.createElement('div');
+                    div.textContent = emoji;
+                    div.className = "text-6xl cursor-pointer transition-transform hover:scale-125";
+                    div.onclick = handleWrongAnswer;
+                    puzzleArea.appendChild(div);
+                });
+                document.getElementById(trickWordId).onclick = completeLevel;
+            };
+        }
+        
+        function setupColorTextTrick() {
+            return () => {
+                const colors = [{ text: '빨간색', color: 'text-blue-500' }, { text: '노란색', color: 'text-green-500' }, { text: '파란색', color: 'text-red-500' }, { text: '초록색', color: 'text-yellow-500' }];
+                colors.sort(() => Math.random() - 0.5);
+                colors.forEach(item => {
+                    const button = document.createElement('button');
+                    button.textContent = item.text;
+                    button.className = `w-2/5 text-2xl font-bold p-4 rounded-lg ${item.color} bg-gray-200 hover:bg-gray-300`;
+                    button.onclick = () => (item.text === '파란색') ? completeLevel() : handleWrongAnswer();
+                    puzzleArea.appendChild(button);
+                });
+            }
+        }
+        
+        function setupTshirtHoles() {
+            return () => {
+                puzzleArea.innerHTML = `<div class="text-9xl relative">👕<div class="absolute top-1/2 left-1/3 w-4 h-4 bg-gray-100 rounded-full"></div><div class="absolute top-2/3 left-2/3 w-4 h-4 bg-gray-100 rounded-full"></div></div><div id="answer-options" class="w-full flex justify-center gap-4 absolute bottom-4"></div>`;
+                ['5개', '6개', '8개'].forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.className = 'text-xl font-bold p-3 rounded-lg bg-white hover:bg-gray-200 w-20';
+                    button.onclick = () => (option === '8개') ? completeLevel() : handleWrongAnswer();
+                    document.getElementById('answer-options').appendChild(button);
+                });
+            }
+        }
+
+        function setupHiddenObject(mainEmoji, hiddenEmoji, coverEmoji) {
+            return () => {
+                const main = document.createElement('div');
+                main.textContent = mainEmoji;
+                main.className = "text-8xl absolute bottom-8 right-8";
+                const hidden = document.createElement('div');
+                hidden.textContent = hiddenEmoji;
+                hidden.className = "text-5xl absolute top-10 left-10 z-0 cursor-pointer";
+                hidden.onclick = completeLevel;
+                const cover = document.createElement('div');
+                cover.textContent = coverEmoji;
+                cover.className = "draggable text-9xl top-8 left-8 z-10";
+                puzzleArea.append(main, hidden, cover);
+                makeDraggable(cover);
+            }
+        }
+
+        function setupMakeLargestNumber(digits, answer) {
+            return () => {
+                const dropZone = document.createElement('div');
+                dropZone.id = 'drop-zone';
+                dropZone.className = 'w-4/5 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-4xl text-gray-400';
+                dropZone.textContent = '여기에 숫자를 놓으세요';
+                puzzleArea.appendChild(dropZone);
+
+                const digitContainer = document.createElement('div');
+                digitContainer.className = 'w-full flex justify-center gap-4 absolute bottom-4';
+                digits.forEach(digit => {
+                    const div = document.createElement('div');
+                    div.textContent = digit;
+                    div.className = 'draggable text-6xl w-16 h-16 flex items-center justify-center';
+                    makeDraggable(div, () => {
+                        let currentOrder = Array.from(puzzleArea.querySelectorAll('.draggable')).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left).map(d => d.textContent).join('');
+                        dropZone.textContent = currentOrder;
+                        if (currentOrder === answer) completeLevel();
+                    });
+                    digitContainer.appendChild(div);
+                });
+                puzzleArea.appendChild(digitContainer);
+            }
+        }
+        
+        function setupDragAway(emoji) {
+            return () => {
+                 const item = document.createElement('div');
+                 item.textContent = emoji;
+                 item.className = 'draggable text-9xl';
+                 puzzleArea.appendChild(item);
+                 makeDraggable(item, () => {
+                    const itemRect = item.getBoundingClientRect();
+                    const areaRect = puzzleArea.getBoundingClientRect();
+                    if(itemRect.right < areaRect.left || itemRect.left > areaRect.right || itemRect.bottom < areaRect.top || itemRect.top > areaRect.bottom) {
+                        completeLevel();
+                    }
+                 });
+            }
+        }
+
+        function setupPasswordInput(password, emoji) {
+            return () => {
+                puzzleArea.innerHTML = `
+                    <div class="text-8xl">${emoji}</div>
+                    <input id="password-input" type="text" class="absolute bottom-4 w-4/5 p-2 text-center rounded-lg border-2" placeholder="정답 입력">
+                `;
+                const input = document.getElementById('password-input');
+                input.oninput = () => {
+                    if (input.value === password) completeLevel();
+                };
+            }
+        }
+
+        function setupEscape(emoji) {
+             return () => {
+                 const item = document.createElement('div');
+                 item.textContent = emoji;
+                 item.className = 'draggable text-6xl';
+                 puzzleArea.appendChild(item);
+                 puzzleArea.style.overflow = 'visible';
+                 makeDraggable(item, () => {
+                    const itemRect = item.getBoundingClientRect();
+                    const areaRect = puzzleArea.getBoundingClientRect();
+                    if(itemRect.right < areaRect.left || itemRect.left > areaRect.right || itemRect.bottom < areaRect.top || itemRect.top > areaRect.bottom) {
+                        completeLevel();
+                    }
+                 });
+            }
+        }
+        
+        function setupHiddenCount(emoji, answer, options) {
+            return () => {
+                puzzleArea.innerHTML = `
+                    <div class="text-7xl absolute top-1/4 left-1/4">${emoji}</div>
+                    <div class="text-7xl absolute top-1/2 left-1/2">${emoji}</div>
+                    <div class="draggable text-7xl absolute top-1/3 left-2/3 z-10">${emoji}</div>
+                    <div class="text-7xl absolute top-1/3 left-2/3 z-0">${emoji}</div>
+                    <div id="answer-options" class="w-full flex justify-center gap-4 absolute bottom-4"></div>
+                `;
+                makeDraggable(puzzleArea.querySelector('.draggable'));
+                options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.className = 'text-xl font-bold p-3 rounded-lg bg-white hover:bg-gray-200 w-20';
+                    button.onclick = () => (parseInt(option) === answer) ? completeLevel() : handleWrongAnswer();
+                    document.getElementById('answer-options').appendChild(button);
+                });
+            }
+        }
+
+        function setupPattern(options, answer) {
+            return () => {
+                options.forEach(option => {
+                    const div = document.createElement('div');
+                    div.textContent = option;
+                    div.className = "text-6xl cursor-pointer transition-transform hover:scale-125";
+                    div.onclick = () => (option === answer) ? completeLevel() : handleWrongAnswer();
+                    puzzleArea.appendChild(div);
+                });
+            }
+        }
+
+        function setupCombine(item1Emoji, item2Emoji, resultEmoji) {
+            return () => {
+                const item1 = document.createElement('div');
+                item1.textContent = item1Emoji;
+                item1.className = 'draggable text-8xl top-8 left-8';
+                const item2 = document.createElement('div');
+                item2.id = 'target';
+                item2.textContent = item2Emoji;
+                item2.className = 'text-8xl bottom-8 right-8';
+                puzzleArea.append(item1, item2);
+
+                makeDraggable(item1, () => {
+                    const rect1 = item1.getBoundingClientRect();
+                    const rect2 = item2.getBoundingClientRect();
+                    if(!(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom)) {
+                        item2.textContent = resultEmoji;
+                        item2.classList.add('transition-transform', 'duration-500', 'scale-150');
+                        item1.remove();
+                        setTimeout(completeLevel, 500);
+                    }
+                });
+            }
+        }
+
+        function setupSequenceButtons() {
+            let bluePressed = false;
+            const blueBtn = document.createElement('button');
+            blueBtn.className = 'w-2/5 h-24 bg-blue-500 text-white font-bold rounded-lg text-2xl';
+            blueBtn.textContent = '파란 버튼';
+            blueBtn.onclick = () => { bluePressed = true; blueBtn.style.opacity = '0.5'; };
+
+            const greenBtn = document.createElement('button');
+            greenBtn.className = 'w-2/5 h-24 bg-green-500 text-white font-bold rounded-lg text-2xl';
+            greenBtn.textContent = '초록 버튼';
+            greenBtn.onclick = () => {
+                if (bluePressed) completeLevel();
+                else handleWrongAnswer();
+            };
+            puzzleArea.append(blueBtn, greenBtn);
+        }
+
+
+        // --- Draggable Logic ---
+        function makeDraggable(element, onDropCallback) {
+            element.addEventListener('mousedown', startDrag);
+            element.addEventListener('touchstart', startDrag, { passive: false });
+            function startDrag(e) {
+                e.preventDefault();
+                activeDraggable = element;
+                activeDraggable.classList.add('dragging');
+                const rect = activeDraggable.getBoundingClientRect();
+                const parentRect = puzzleArea.getBoundingClientRect();
+                if (e.type === 'touchstart') {
+                    offsetX = e.touches[0].clientX - rect.left + parentRect.left;
+                    offsetY = e.touches[0].clientY - rect.top + parentRect.top;
+                } else {
+                    offsetX = e.clientX - rect.left + parentRect.left;
+                    offsetY = e.clientY - rect.top + parentRect.top;
+                }
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag, { passive: false });
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchend', endDrag);
+            }
+            function drag(e) {
+                if (!activeDraggable) return;
+                e.preventDefault();
+                let x = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+                let y = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+                activeDraggable.style.left = `${x - offsetX}px`;
+                activeDraggable.style.top = `${y - offsetY}px`;
+            }
+            function endDrag() {
+                if (!activeDraggable) return;
+                activeDraggable.classList.remove('dragging');
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('touchmove', drag);
+                document.removeEventListener('mouseup', endDrag);
+                document.removeEventListener('touchend', endDrag);
+                activeDraggable = null;
+                if (onDropCallback) onDropCallback();
+            }
+        }
+        
+        // --- Initial Event Listeners ---
+        startButton.addEventListener('click', () => {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission();
+            }
+            showLevelSelect();
+        });
+
+        nextLevelButton.addEventListener('click', nextLevel);
+        selectLevelButton.addEventListener('click', () => {
+            successModal.classList.add('hidden');
+            showLevelSelect();
+        });
+        
+        backToLevelsButton.addEventListener('click', showLevelSelect);
+        backToMenuButton.addEventListener('click', () => showScreen(startScreen));
+        
+        restartButton.addEventListener('click', () => {
+            unlockedLevel = 1;
+            gameCompleteScreen.classList.add('hidden');
+            showScreen(startScreen);
+        });
+    </script>
+</body>
+</html>
+
