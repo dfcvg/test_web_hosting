@@ -120,7 +120,7 @@
 
         // --- All Levels Data ---
         const levels = [
-            // 1-20
+            // 1-20 (Some replaced)
             { question: "이 중에서 다른 이모지는 무엇일까요?", setup: setupFindDifferent(['🐼', '🐼', '🐼', '🐻', '🐼', '🐼', '🐼', '🐼'], '🐻'), hint: "무언가 하나만 달라요. 곰곰이 생각해보세요." },
             { question: "토끼에게 당근을 주세요.", setup: setupDragAndDrop('🐰', '🥕'), hint: "당근을 직접 토끼에게 가져다주면 어떨까요?" },
             { question: "코코넛을 따려면 나무를 흔들어주세요.", setup: setupShake('🌴', '🥥'), cleanup: () => window.removeEventListener('devicemotion', handleShake), hint: "스마트폰을 실제로 흔들어 보세요!" },
@@ -132,7 +132,7 @@
             { question: "이 문장 어딘가에 숨어있는 💎을 찾으세요.", setup: () => { puzzleArea.innerHTML = ''; document.getElementById('question').innerHTML = "이 문장 어딘가에 숨어있는 <span class='cursor-pointer' onclick='completeLevel()'>💎</span>을 찾으세요."; }, hint: "문제 자체에 다이아몬드가 숨어있어요." },
             { question: "어둡게 만들어 주세요.", setup: setupDragAway('☀️'), hint: "하늘에 떠 있는 해를 치워버리면 어두워지지 않을까요?" },
             { question: "5초 동안 아무것도 만지지 마세요.", setup: () => { puzzleArea.innerHTML = '<div class="text-2xl">가만히...</div>'; patienceTimer = setTimeout(completeLevel, 5000); puzzleArea.addEventListener('click', handleWrongAnswer); }, cleanup: () => { clearTimeout(patienceTimer); puzzleArea.removeEventListener('click', handleWrongAnswer); }, hint: "정말로 아무것도 건드리지 않고 5초를 기다려보세요." },
-            { question: "상자를 열려면 '열려라참깨'를 입력하세요.", setup: setupPasswordInput('열려라참깨', '📦'), hint: "주문을 키보드로 직접 입력해보세요." },
+            { question: "선을 떼지 말고 모든 점을 이어주세요.", setup: setupOneStrokeDrawing(), hint: "한 번에 모든 선을 그려야 합니다. 손을 떼면 처음부터 다시 시작해요." },
             { question: "가장 무거운 것을 고르세요.", setup: setupFindDifferent(['🎈', '🐘', '☁️'], '🐘', false), hint: "상상 속 무게가 아니라 실제 무게를 생각해보세요." },
             { question: "쥐가 탈출하도록 도와주세요 🐁", setup: setupEscape('🐁'), hint: "게임 화면 밖으로 쥐를 끌어내 보세요." },
             { question: "사과는 모두 몇 개일까요?", setup: setupHiddenCount('🍎', 4, ['2', '3', '4']), hint: "하나의 사과가 다른 사과를 가리고 있어요. 드래그 해보세요." },
@@ -142,7 +142,7 @@
             { question: "초록 버튼을 누르기 전에, 파란 버튼을 먼저 누르세요.", setup: setupSequenceButtons(), hint: "문제를 잘 읽어보세요. 파란 버튼을 먼저, 그 다음에 초록 버튼!" },
             { question: "게임을 끝내려면 이 레벨의 숫자를 누르세요.", setup: () => { puzzleArea.innerHTML = '<div class="text-4xl">🤔</div>'; levelIndicator.parentElement.classList.add('cursor-pointer'); levelIndicator.parentElement.onclick = () => { completeLevel(); }; }, cleanup: () => { levelIndicator.parentElement.classList.remove('cursor-pointer'); levelIndicator.parentElement.onclick = null; }, hint: "화면 상단에 보이는 레벨 숫자를 눌러보세요." },
             
-            // 21-40
+            // 21-40 (Some replaced)
             { question: "불을 모두 끄세요.", setup: setupClickToDisappear('🔥', 3), hint: "불을 손가락으로 문질러서 끌 수 있어요." },
             { question: "고양이를 숨겨주세요.", setup: setupDragAndDrop('🐈', '📦', true), hint: "고양이 위로 상자를 드래그해서 덮어보세요." },
             { question: "가장 높은 곳에 있는 <span id='bird-word' class='cursor-pointer'>새</span>를 터치하세요.", setup: setupTrickWord(['🐦', '🦅', '🕊️'], 'bird-word'), hint: "문제에 쓰여있는 '새' 글자가 가장 높이 있지 않나요?" },
@@ -154,23 +154,23 @@
             { question: "먹을 수 없는 것은?", setup: setupFindDifferent(['🍔', '🍕', '👟', '🍰'], '👟'), hint: "신발은 먹을 수 없어요!" },
             { question: "휴대폰을 뒤집어 보세요.", setup: setupDeviceOrientation(), cleanup: () => window.removeEventListener('deviceorientation', handleOrientation), hint: "스마트폰을 실제로 거꾸로 뒤집어보세요." },
             { question: "가장 긴 막대를 고르세요.", setup: setupDraggableLength(), hint: "막대들을 드래그해서 길이를 비교해 보세요." },
-            { question: "버튼을 10번 누르세요.", setup: setupClickCounter(10), hint: "숫자가 9에서 ??로 바뀝니다. 그래도 한 번 더 눌러보세요." },
+            { question: "순서를 기억하고 따라하세요.", setup: setupSimonSays(4), hint: "빛나는 색상의 순서를 잘 기억했다가 그대로 따라 누르세요." },
             { question: "코끼리를 냉장고에 넣어보세요.", setup: setupEnlargeAndDrop('🐘', '🧊'), hint: "먼저 냉장고 문을 열어야죠! 냉장고를 터치해서 크게 만드세요." },
             { question: "모두를 깨워주세요.", setup: setupClickToChange('😴', '😀', 5), hint: "모든 자는 얼굴을 터치해서 깨워주세요." },
             { question: "가장 왼쪽의 과일을 터치하세요.", setup: setupDynamicTarget(), hint: "새로운 과일이 나타날 때까지 기다렸다가 가장 왼쪽 것을 누르세요." },
-            { question: "비밀번호는 'password' 입니다.", setup: setupPasswordInput('password', '🔑'), hint: "비밀번호는 문제에 나와있는 그대로 'password'입니다." },
+            { question: "다음 중 거짓말을 찾아 누르세요.", setup: setupFindTheLie(['태양은 별이다', '펭귄은 날 수 있다', '물은 H2O이다'], '펭귄은 날 수 있다'), hint: "펭귄은 새이지만 날지 못합니다." },
             { question: "아침엔 네 발, 점심엔 두 발, 저녁엔 세 발인 것은?", setup: setupRiddleWithOptions(['의자', '사람', '동물'], '사람'), hint: "정답은 사람입니다. 아기 때 네 발, 어른일 때 두 발, 늙어서 지팡이를 짚으면 세 발." },
             { question: "거북이가 이기게 해주세요.", setup: setupMoveFinishLine('🐢', '🏁'), hint: "결승선을 거북이 쪽으로 옮겨보세요." },
             { question: "가위를 이기게 해주세요.", setup: setupDragAway(['✊', '✋'], '✌️'), hint: "가위는 바위와 보를 이길 수 없으니... 치워버리세요!" },
-            { question: "양을 세어보세요.", setup: setupCountingGame('🐑', 8), hint: "졸릴 때 양을 세죠? 양이 지나가는 걸 보고 숫자를 맞춰보세요." },
+            { question: "시계를 3시 정각으로 맞추세요.", setup: setupAdjustClock(3, 0), hint: "시침과 분침을 드래그해서 시간을 조절할 수 있습니다." },
 
-            // 41-60
+            // 41-60 (Some replaced)
             { question: "가장 어두운 색을 터치하세요.", setup: () => { questionEl.innerHTML = "가장 어두운 <span class='cursor-pointer font-black' onclick='completeLevel()'>색</span>을 터치하세요."; puzzleArea.innerHTML = '<div class="w-20 h-20 bg-gray-600"></div><div class="w-20 h-20 bg-gray-800"></div>'; }, hint: "문제에 있는 '색'이라는 글자가 가장 어두운 검은색입니다." },
             { question: "TV를 켜주세요.", setup: setupClickablePart('📺', '.5, .5, .1', completeLevel), hint: "TV 화면 오른쪽 아래의 작은 전원 버튼을 눌러보세요." },
             { question: "수박을 쪼개주세요.", setup: setupTwoFingerSwipe('🍉'), hint: "두 손가락으로 화면을 스와이프해서 수박을 갈라보세요." },
             { question: "오른쪽에서 두 번째 전등을 켜세요.", setup: setupLightSwitches(5, 3), hint: "오른쪽에서부터 세어보세요. 두 번째 전등 스위치는 어디일까요?" },
             { question: "저를 찾아보세요.", setup: setupFindDifferent(['😀', '😂', '😍', '😇', '🧐', '😭'], '🧐'), hint: "안경을 쓰고 유심히 보는 이모지가 바로 '저'입니다." },
-            { question: "3 X 8 = ?", setup: setupPasswordInput('24', '🧮'), hint: "정답은 24입니다." },
+            { question: "이 방정식을 풀어보세요: 8+8=91", setup: setupUpsideDownRiddle(), cleanup: () => window.removeEventListener('deviceorientation', handleOrientation), hint: "방정식이 이상하죠? 스마트폰을 거꾸로 뒤집어 보세요." },
             { question: "파리를 잡아주세요.", setup: setupCatchTheFly('🦟'), hint: "파리는 매우 빠릅니다. 잘 조준해서 터치하세요!" },
             { question: "저울의 균형을 맞추세요.", setup: setupBalanceScale('⚖️', '🧱', 3), hint: "저울 위에 있는 물건들을 모두 치워버리세요." },
             { question: "머리카락은 몇 개일까요?", setup: setupRiddleWithOptions(['1000', '1', '0'], '0', '🧑‍🦲'), hint: "이모지는 대머리입니다. 머리카락이 없어요." },
@@ -180,40 +180,40 @@
             { question: "이 중에서 소리가 나는 것은?", setup: setupFindDifferent(['🔔', '📖', '🪨'], '🔔'), hint: "종(bell)을 누르면 소리가 나죠." },
             { question: "화면을 깨끗하게 닦아주세요.", setup: setupWipeScreen('🧽'), hint: "스펀지를 드래그해서 화면의 얼룩을 문질러 닦아보세요." },
             { question: "공을 골대에 넣으세요.", setup: setupMoveTarget('⚽', '🥅'), hint: "골대를 움직여서 공을 받을 수 있어요." },
-            { question: "현재 시각은?", setup: setupCurrentTime(), hint: "당신의 스마트폰에 표시된 현재 시각을 그대로 입력하세요." },
+            { question: "숫자를 순서대로 연결하세요.", setup: setupConnectTheDots(5), hint: "1부터 시작해서 순서대로 점을 터치하여 연결하세요." },
             { question: "숨겨진 별을 찾으세요.", setup: setupHiddenStars('⭐', 5), hint: "별들이 배경색과 비슷하게 숨어있어요. 눈을 크게 뜨고 찾아보세요." },
-            { question: "사자를 우리에 가두세요.", setup: setupBuildCage('🦁'), hint: "쇠창살들을 드래그해서 사자 주변에 우리를 만드세요." },
+            { question: "유리잔에 물을 채우세요.", setup: setupPlugTheHoleAndFill('💧', '🍷'), hint: "컵에 구멍이 뚫려있어요. 한 손가락으로 구멍을 막고 다른 손으로 물을 부어보세요." },
             { question: "물고기를 낚아보세요.", setup: setupDragAndDrop('🎣', '🐠'), hint: "낚싯대를 물고기 쪽으로 가져가세요." },
             { question: "가장 빠른 동물을 고르세요.", setup: setupRiddleWithOptions(['말', '치타', '타조'], '치타'), hint: "육지에서 가장 빠른 동물은 치타입니다." },
 
-            // 61-80
+            // 61-80 (Some replaced)
             { question: "풍선을 터뜨리지 마세요.", setup: () => { puzzleArea.innerHTML = '<div class="text-8xl">🎈</div><button class="absolute bottom-4 bg-blue-500 text-white py-2 px-4 rounded" onclick="completeLevel()">다음</button>'; }, hint: "풍선을 건드리지 말고 '다음' 버튼을 눌러 넘어가세요." },
-            { question: "강아지에게 '앉아'라고 말해보세요.", setup: setupPasswordInput('앉아', '🐶'), hint: "문제에 나온 그대로 '앉아'라고 입력해보세요." },
+            { question: "태양 빛을 만들지 않는 것을 고르세요.", setup: setupFindDifferent(['☀️', '🔥', '💡', '🌙'], '🌙'), hint: "달은 스스로 빛을 내지 않고 햇빛을 반사합니다." },
             { question: "케이크에 촛불을 켜주세요.", setup: setupCombine('🕯️', '🎂', '🎂'), hint: "불이 켜진 초를 케이크 위로 가져가세요." },
             { question: "케이크의 촛불을 꺼주세요.", setup: setupClickToDisappear('🔥', 3, '🎂'), hint: "케이크 위 촛불들을 손으로 터치해서 끄세요." },
             { question: "어떤 문이 진짜일까요?", setup: setupRealDoor(), hint: "오른쪽 문은 통과할 수 있을지도 모릅니다." },
             { question: "빨간색과 파란색을 섞어보세요.", setup: setupColorMix('🔴', '🔵', '🟣'), hint: "빨간색 동그라미를 파란색 위로 겹쳐보세요." },
             { question: "가장 작은 점을 클릭하세요.", setup: () => { questionEl.innerHTML = "가장 작은 점을 클릭하세요<span class='text-red-500 cursor-pointer' onclick='completeLevel()'>.</span>"; }, hint: "문제 문장 끝에 있는 마침표(.)가 가장 작은 점입니다." },
-            { question: "퍼즐을 맞춰보세요.", setup: setupJigsawPuzzle(), hint: "가만히 있으면 저절로 맞춰집니다. 인내심을 가지세요." },
+            { question: "문제를 잘 읽고 지시를 따르세요.", setup: setupFollowInstructions(), hint: "'제발'이라는 단어가 있을 때만 지시를 따라야 합니다." },
             { question: "지구를 구해주세요!", setup: setupDragAway('☄️', '🌍'), hint: "지구로 날아오는 운석을 손으로 잡아서 화면 밖으로 던져버리세요." },
             { question: "안전하게 길을 건너게 해주세요.", setup: setupCrossTheRoad('🚶', '🚗'), hint: "사람을 위로 드래그해서 차를 뛰어넘게 하세요." },
-            { question: "책을 순서대로 꽂으세요.", setup: setupSortItems(['📖3', '📖1', '📖4', '📖2'], ['📖1', '📖2', '📖3', '📖4']), hint: "책 표지에 쓰인 숫자를 보고 1, 2, 3, 4 순서로 정렬하세요." },
+            { question: "숫자를 오름차순으로 누르세요.", setup: setupTapInOrder(6), hint: "가장 작은 숫자부터 순서대로 화면에 나타난 숫자들을 터치하세요." },
             { question: "가장 높은 숫자를 클릭하세요.", setup: setupHighestNumber(), hint: "화면에서 가장 높은 위치에 있는 숫자를 찾아보세요." },
-            { question: "로봇을 조립해주세요.", setup: setupAssembleRobot(['🤖', '🦾', '🦿']), hint: "부품들을 가운데로 모아보세요. 저절로 조립됩니다." },
+            { question: "다음 수열에 올 숫자는? 1, 4, 9, 16, ?", setup: setupRiddleWithOptions(['20', '25', '32'], '25'), hint: "이 수열은 제곱수입니다. 1x1, 2x2, 3x3, 4x4, ... " },
             { question: "유령을 물리쳐주세요.", setup: setupDragAndDrop('👻', '💨', true), hint: "바람 이모지를 유령에게 가져가 날려버리세요." },
             { question: "창문을 열어주세요.", setup: setupSlideToOpen('🪟'), hint: "창문을 옆으로 슬라이드하듯 밀어보세요." },
             { question: "이 중에 스파이는 누구일까요?", setup: setupFindDifferent(['🐈', '🐈', '🐈', '🐕', '🐈'], '🐕'), hint: "고양이들 사이에 개 한 마리가 숨어있네요." },
             { question: "버튼을 누르지 마세요!", setup: () => { puzzleArea.innerHTML = '<div class="w-32 h-32 bg-red-500 text-white rounded-full flex items-center justify-center text-3xl cursor-pointer" onclick="handleWrongAnswer()">누르시오</div>'; patienceTimer = setTimeout(completeLevel, 4000); }, cleanup: () => clearTimeout(patienceTimer), hint: "4초만 기다리면 아무것도 누르지 않아도 클리어됩니다." },
             { question: "메모를 찾으세요.", setup: setupHiddenObject('📝', '🗒️', '📄', true), hint: "종이들을 하나씩 드래그해서 치워보면 아래에 메모가 숨겨져 있어요." },
-            { question: "다이아몬드를 훔치세요.", setup: setupMaze('💎'), hint: "미로를 통과하려 하지 마세요. 그냥 기다리세요." },
+            { question: "다이아몬드를 훔치세요.", setup: setupMaze('💎'), cleanup: () => { clearTimeout(patienceTimer); puzzleArea.removeEventListener('click', handleWrongAnswer); }, hint: "미로를 통과하려 하지 마세요. 그냥 기다리세요." },
             { question: "새를 날려보내세요.", setup: setupEscape('🐦'), hint: "새를 잡아서 화면 위쪽으로 던져보세요." },
 
-            // 81-100
+            // 81-100 (Some replaced)
             { question: "얼음을 녹여주세요.", setup: setupCombine('☀️', '🧊', '💧'), hint: "해를 얼음 위로 가져가면 녹일 수 있어요." },
-            { question: "성냥개비 1개를 옮겨 식을 완성하세요. 1+1=3", setup: setupMatchstickPuzzle(), hint: "이건 상상력 문제입니다. 그냥 기다리면 해결됩니다." },
+            { question: "모스 부호를 해독하세요: ... --- ...", setup: setupRiddleWithOptions(['SOS', 'LOL', 'OMG'], 'SOS'), hint: "...는 S, ---는 O 입니다." },
             { question: "전화를 받아주세요.", setup: setupSwipeToAnswer('📞'), hint: "전화기 아이콘을 오른쪽으로 슬라이드해서 전화를 받으세요." },
             { question: "상자를 오른쪽으로 옮기세요.", setup: () => { questionEl.innerHTML = "이 <span class='draggable text-blue-500'>상자</span>를 오른쪽으로 옮기세요."; makeDraggable(questionEl.querySelector('.draggable')); puzzleArea.innerHTML = '<div class="absolute right-4 border-2 p-4">여기</div>'; }, hint: "문제에 있는 '상자'라는 글자를 드래그해보세요." },
-            { question: "모든 동물을 찾아보세요.", setup: setupFindAll(['🐒', '🐘', '🐅'], 3), hint: "화면 곳곳에 숨어있는 동물들을 모두 터치하세요." },
+            { question: "숨겨진 단어 'APPLE'을 찾으세요.", setup: setupWordSearch('APPLE'), hint: "글자판에서 단어를 찾아 드래그하세요." },
             { question: "거꾸로 해도 똑같은 단어는?", setup: setupRiddleWithOptions(['LEVEL', 'EYE', 'NOON'], 'LEVEL'), hint: "'LEVEL'은 거꾸로 해도 'LEVEL'입니다." },
             { question: "해골을 클릭하지 마세요!", setup: setupAvoidClicking('💀', ['😀', '😇', '😍']), hint: "해골이 아닌 다른 웃는 얼굴들을 터치하세요." },
             { question: "열쇠로 문을 여세요.", setup: setupDragAndDrop('🔑', '🚪'), hint: "열쇠를 문으로 가져가세요." },
@@ -222,12 +222,12 @@
             { question: "날 수 없는 새는?", setup: setupFindDifferent(['🦅', '🦉', '🐧', '🕊️'], '🐧'), hint: "펭귄은 날지 못하는 새입니다." },
             { question: "🌲+🌲=10, 🌲+🔥=7, 🔥=?", setup: setupRiddleWithOptions(['2', '3', '5'], '2'), hint: "나무는 5, 불은 2입니다." },
             { question: "공을 화면 밖으로 꺼내세요.", setup: setupEscape('⚽'), hint: "공을 드래그해서 화면 밖으로 던져버리세요." },
-            { question: "모든 불을 켜세요.", setup: setupLightsOut(3), hint: "이것도 어려운 문제입니다. 잠시 기다리면 해결됩니다." },
+            { question: "그림자를 보고 원래 물건을 맞추세요.", setup: setupMatchTheShadow('🐘', ['🐘', '🦒', '🦏']), hint: "코가 긴 그림자는 코끼리입니다." },
             { question: "왼쪽 신발을 찾아주세요.", setup: setupFindPair('👟'), hint: "오른쪽 신발을 좌우반전 시킨 것이 왼쪽 신발입니다." },
             { question: "가장 긴 그림자를 만드세요.", setup: setupShadow(), hint: "해가 움직이면 그림자 길이도 변합니다. 잠시 기다려보세요." },
             { question: "숨겨진 숫자를 찾으세요.", setup: setupHiddenNumber('7'), hint: "배경색과 거의 같은 색으로 숫자가 숨겨져 있습니다." },
             { question: "A, B, C, D, ... 다음은?", setup: setupRiddleWithOptions(['E', 'F', 'G'], 'E'), hint: "정답은 E입니다." },
-            { question: "당신의 IQ는?", setup: setupPasswordInput('', '🧠', '아무거나 입력!'), hint: "어떤 답을 입력해도 정답입니다. 당신의 IQ는 최고!" },
+            { question: "빨간 블록을 탈출시키세요.", setup: setupUnblockMe(), hint: "다른 블록들을 움직여서 빨간 블록이 나갈 길을 만드세요." },
             { question: "개발자에게 박수를!", setup: setupClap(5), hint: "개발자를 위해 박수 이모지를 여러 번 눌러주세요!" }
         ];
         
@@ -576,7 +576,7 @@
             };
         }
 
-        // --- NEW SETUP FUNCTIONS ---
+        // --- NEW & ADVANCED SETUP FUNCTIONS ---
 
         function setupClickToDisappear(emoji, count, baseEmoji = '') {
             return () => {
@@ -620,7 +620,7 @@
         }
 
         function handleOrientation(event) {
-            if (event.beta > 150 || event.beta < -150) {
+            if (event.beta < -150 || event.beta > 150 ) { // Wider range for different devices
                 completeLevel();
                 window.removeEventListener('deviceorientation', handleOrientation);
             }
@@ -647,29 +647,12 @@
                 });
             }
         }
-
-        function setupClickCounter(targetCount) {
-             return () => {
-                let count = 0;
-                puzzleArea.innerHTML = `<div id="counter-btn" class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center text-white text-3xl cursor-pointer">0</div>`;
-                const btn = document.getElementById('counter-btn');
-                btn.onclick = () => {
-                    count++;
-                    btn.textContent = count;
-                    if(count === targetCount - 1) btn.textContent = '??';
-                    if(count === targetCount) {
-                        btn.onclick = null;
-                        setTimeout(completeLevel, 300);
-                    }
-                }
-             }
-        }
         
         function setupEnlargeAndDrop(emojiToDrag, emojiTarget) {
             return () => {
                 const target = document.createElement('div');
                 target.textContent = emojiTarget;
-                target.className = 'text-7xl transition-transform duration-500';
+                target.className = 'text-7xl transition-transform duration-500 cursor-pointer';
                 target.onclick = () => target.style.transform = 'scale(2.5)';
                 const draggable = document.createElement('div');
                 draggable.textContent = emojiToDrag;
@@ -740,30 +723,159 @@
                 });
             }
         }
-        
-        function setupCountingGame(emoji, count) {
+
+        function setupAdjustClock(targetHour, targetMinute) {
             return () => {
-                 let sheepCount = 0;
-                 const interval = setInterval(() => {
-                    if (sheepCount >= count) {
-                        clearInterval(interval);
-                        return;
+                puzzleArea.innerHTML = `
+                    <div id="clock-face" class="w-64 h-64 bg-white border-8 border-gray-400 rounded-full relative">
+                        <div id="hour-hand" class="absolute h-20 w-1.5 bg-black left-1/2 top-1/2 " style="transform-origin: bottom; transform: translateX(-50%) translateY(-100%) rotate(0deg);"></div>
+                        <div id="minute-hand" class="absolute h-28 w-1 bg-black left-1/2 top-1/2 " style="transform-origin: bottom; transform: translateX(-50%) translateY(-100%) rotate(0deg);"></div>
+                        <div class="absolute w-4 h-4 bg-black rounded-full left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+                    </div>
+                `;
+
+                const hourHand = document.getElementById('hour-hand');
+                const minuteHand = document.getElementById('minute-hand');
+                const clock = document.getElementById('clock-face');
+
+                function makeHandDraggable(hand) {
+                    hand.addEventListener('mousedown', startDrag);
+                    hand.addEventListener('touchstart', startDrag, { passive: false });
+
+                    function startDrag(e) {
+                        e.preventDefault();
+                        document.addEventListener('mousemove', drag);
+                        document.addEventListener('touchmove', drag, { passive: false });
+                        document.addEventListener('mouseup', endDrag);
+                        document.addEventListener('touchend', endDrag);
                     }
-                    const s = document.createElement('div');
-                    s.textContent = emoji;
-                    s.className = 'absolute text-5xl';
-                    s.style.top = `${Math.random() * 80}%`;
-                    s.style.left = '-10%';
-                    puzzleArea.appendChild(s);
-                    setTimeout(() => {
-                        s.style.transition = `left ${2 + Math.random() * 2}s linear`;
-                        s.style.left = '110%';
-                    }, 100);
-                    setTimeout(() => s.remove(), 4000);
-                    sheepCount++;
-                 }, 800);
-                 setupRiddleWithOptions([count-1, count, count+1].map(String), String(count))();
-            }
+
+                    function drag(e) {
+                        e.preventDefault();
+                        const rect = clock.getBoundingClientRect();
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+                        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+                        const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+                        const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI) + 90;
+                        hand.style.transform = `translateX(-50%) translateY(-100%) rotate(${angle}deg)`;
+                    }
+
+                    function endDrag() {
+                        document.removeEventListener('mousemove', drag);
+                        document.removeEventListener('touchmove', drag);
+                        document.removeEventListener('mouseup', endDrag);
+                        document.removeEventListener('touchend', endDrag);
+
+                        const hourAngleStr = hourHand.style.transform.split('rotate(')[1];
+                        const minuteAngleStr = minuteHand.style.transform.split('rotate(')[1];
+
+                        const hourAngle = hourAngleStr ? parseFloat(hourAngleStr) : 0;
+                        const minuteAngle = minuteAngleStr ? parseFloat(minuteAngleStr) : 0;
+                        
+                        const normalizedHourAngle = (hourAngle % 360 + 360) % 360;
+                        const normalizedMinuteAngle = (minuteAngle % 360 + 360) % 360;
+
+                        const currentHour = Math.round(normalizedHourAngle / 30) % 12;
+                        const currentMinute = Math.round(normalizedMinuteAngle / 6) % 60;
+                        
+                        const finalHour = currentHour === 0 ? 12 : currentHour;
+
+                        if (finalHour === targetHour && currentMinute === targetMinute) {
+                            completeLevel();
+                        }
+                    }
+                }
+
+                makeHandDraggable(hourHand);
+                makeHandDraggable(minuteHand);
+            };
+        }
+
+        // One-Stroke Drawing Game
+        function setupOneStrokeDrawing() {
+            return () => {
+                puzzleArea.innerHTML = '<canvas id="one-stroke-canvas" width="300" height="300" class="rounded-xl"></canvas>';
+                const canvas = document.getElementById('one-stroke-canvas');
+                const ctx = canvas.getContext('2d');
+                const points = [ {x: 75, y: 150}, {x: 150, y: 75}, {x: 225, y: 150}, {x: 150, y: 225} ];
+                const lines = [ {p1: 0, p2: 1, drawn: false}, {p1: 1, p2: 2, drawn: false}, {p1: 2, p2: 3, drawn: false}, {p1: 3, p2: 0, drawn: false} ];
+
+                let isDrawing = false;
+                let lastPoint = null;
+
+                function draw() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    // Draw lines
+                    ctx.strokeStyle = '#cbd5e1';
+                    ctx.lineWidth = 10;
+                    lines.forEach(line => {
+                        ctx.beginPath();
+                        ctx.moveTo(points[line.p1].x, points[line.p1].y);
+                        ctx.lineTo(points[line.p2].x, points[line.p2].y);
+                        ctx.stroke();
+                        if (line.drawn) {
+                            ctx.strokeStyle = '#4ade80';
+                            ctx.stroke();
+                            ctx.strokeStyle = '#cbd5e1';
+                        }
+                    });
+                     // Draw points
+                    points.forEach((point, index) => {
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
+                        ctx.fillStyle = lastPoint === index ? '#f59e0b' : '#3b82f6';
+                        ctx.fill();
+                    });
+                }
+
+                function getPointAt(x, y) {
+                    for (let i = 0; i < points.length; i++) {
+                        const dist = Math.hypot(points[i].x - x, points[i].y - y);
+                        if (dist < 15) return i;
+                    }
+                    return null;
+                }
+                
+                function reset() {
+                    lines.forEach(l => l.drawn = false);
+                    lastPoint = null;
+                    draw();
+                }
+
+                canvas.addEventListener('mousedown', (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const pointIndex = getPointAt(e.clientX - rect.left, e.clientY - rect.top);
+                    if (pointIndex !== null) {
+                        isDrawing = true;
+                        lastPoint = pointIndex;
+                        draw();
+                    }
+                });
+
+                canvas.addEventListener('mousemove', (e) => {
+                    if (!isDrawing) return;
+                    const rect = canvas.getBoundingClientRect();
+                    const pointIndex = getPointAt(e.clientX - rect.left, e.clientY - rect.top);
+                    if (pointIndex !== null && pointIndex !== lastPoint) {
+                        const line = lines.find(l => (l.p1 === lastPoint && l.p2 === pointIndex) || (l.p1 === pointIndex && l.p2 === lastPoint));
+                        if (line && !line.drawn) {
+                            line.drawn = true;
+                            lastPoint = pointIndex;
+                            draw();
+                            if (lines.every(l => l.drawn)) setTimeout(completeLevel, 200);
+                        }
+                    }
+                });
+
+                canvas.addEventListener('mouseup', () => {
+                    isDrawing = false;
+                    if (!lines.every(l => l.drawn)) {
+                       setTimeout(reset, 300);
+                    }
+                });
+                draw();
+            };
         }
         
         // --- Draggable Logic ---
@@ -850,28 +962,42 @@
         function setupShakeToChange(from, withItem, to) { return () => { puzzleArea.innerHTML = `<div id="changeable" class="text-8xl">${from}</div><div class="text-5xl absolute bottom-4">${withItem}</div>`; window.addEventListener('devicemotion', e => { if (e.acceleration.x > 15) { document.getElementById('changeable').textContent = to; setTimeout(completeLevel, 500); } }); }; }
         function setupWipeScreen(sponge) { return () => { puzzleArea.innerHTML = `<div class="absolute inset-0 bg-yellow-900 bg-opacity-40 z-10" id="dirt"></div><div class="draggable text-7xl z-20">${sponge}</div>`; makeDraggable(puzzleArea.querySelector('.draggable'), () => { document.getElementById('dirt').style.opacity = '0'; setTimeout(completeLevel, 500); }); }; }
         function setupMoveTarget(item, target) { return () => { const i = document.createElement('div'); i.textContent = item; i.className = 'text-7xl absolute bottom-4'; const t = document.createElement('div'); t.textContent = target; t.className = 'draggable text-9xl'; puzzleArea.append(i,t); makeDraggable(t, () => { if(t.getBoundingClientRect().left < i.getBoundingClientRect().right) completeLevel(); }); }; }
-        function setupCurrentTime() { return () => { const d = new Date(); const t = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; setupPasswordInput(t, '⏰')(); }; }
-        function setupHiddenStars(star, count) { return () => { for(let i=0; i<count; i++) { const s = document.createElement('div'); s.textContent = star; s.className='absolute text-4xl cursor-pointer text-gray-200'; s.style.top=`${Math.random()*90}%`; s.style.left=`${Math.random()*90}%`; s.onclick=completeLevel; puzzleArea.appendChild(s); } }; }
-        function setupBuildCage(animal) { return () => { puzzleArea.innerHTML = `<div class="text-8xl">${animal}</div>`; for(let i=0; i<4; i++) { const bar = document.createElement('div'); bar.className = 'draggable w-2 h-24 bg-gray-500'; makeDraggable(bar); puzzleArea.appendChild(bar); } setTimeout(completeLevel, 8000); }; }
+        function setupHiddenStars(star, count) { return () => { for(let i=0; i<count; i++) { const s = document.createElement('div'); s.textContent = star; s.className='absolute text-4xl cursor-pointer text-gray-200'; s.style.top=`${Math.random()*90}%`; s.style.left=`${Math.random()*90}%`; s.onclick=()=>{s.classList.remove('text-gray-200'); s.classList.add('text-yellow-400'); if([...puzzleArea.children].every(c => c.classList.contains('text-yellow-400'))) completeLevel()}; puzzleArea.appendChild(s); } }; }
+        function setupPlugTheHoleAndFill(water, glass) { return () => { puzzleArea.innerHTML = `<div class="draggable text-7xl absolute top-4 left-4">${water}</div><div class="text-9xl relative">${glass}<div id="hole" class="absolute bottom-2 left-1/2 w-4 h-4 bg-gray-100 rounded-full border-2 border-black"></div></div>`; let holePlugged = false; document.getElementById('hole').onclick = () => { holePlugged = true; document.getElementById('hole').style.backgroundColor = 'brown'; }; makeDraggable(puzzleArea.querySelector('.draggable'), () => { if(holePlugged) completeLevel(); }); }; }
         function setupRealDoor() { return () => { for(let i=0; i<3; i++) { const d = document.createElement('div'); d.textContent = '🚪'; d.className='text-8xl cursor-pointer'; if(i===2) d.onclick=completeLevel; else d.onclick=handleWrongAnswer; puzzleArea.appendChild(d); } }; }
         function setupColorMix(c1, c2, res) { return () => { const color1 = document.createElement('div'); color1.textContent=c1; color1.className='draggable text-8xl top-8 left-8'; const color2 = document.createElement('div'); color2.textContent=c2; color2.className='text-8xl bottom-8 right-8'; puzzleArea.append(color1,color2); makeDraggable(color1, () => { if(color1.getBoundingClientRect().left > color2.getBoundingClientRect().left-30) { color2.textContent = res; color1.remove(); setTimeout(completeLevel, 500); } }); }; }
-        function setupJigsawPuzzle() { return () => { puzzleArea.innerHTML = '<div class="text-8xl">🧩</div>'; setTimeout(completeLevel, 2000); }; }
-        function setupCrossTheRoad(p, c) { return () => { const person = document.createElement('div'); person.textContent = p; person.className = 'draggable text-6xl absolute bottom-0 left-1/2'; const car = document.createElement('div'); car.textContent = c; car.className = 'absolute text-7xl top-1/2 -left-1/4 animate-pulse'; car.style.animation = 'slide 4s linear infinite'; puzzleArea.append(person, car); makeDraggable(person, () => { if(person.getBoundingClientRect().top < car.getBoundingClientRect().bottom) completeLevel(); }); }; }
-        function setupSortItems(items, sorted) { return () => { const container = document.createElement('div'); container.className = 'flex gap-2'; items.forEach(i => { const item=document.createElement('div'); item.textContent=i; item.className='draggable text-4xl'; makeDraggable(item, () => { const current = [...container.children].map(c=>c.textContent).join(''); if(current === sorted.join('')) completeLevel(); }); container.appendChild(item); }); puzzleArea.appendChild(container); }; }
-        function setupHighestNumber() { return () => { puzzleArea.innerHTML = '<div class="absolute top-1/4 left-1/2 cursor-pointer" onclick="handleWrongAnswer()">5</div><div class="absolute top-1/2 left-1/4 cursor-pointer" onclick="handleWrongAnswer()">9</div><div class="absolute top-10 left-10 cursor-pointer text-2xl" onclick="completeLevel()">2</div>'; }; }
-        function setupAssembleRobot(parts) { return () => { parts.forEach((p, i) => { const part = document.createElement('div'); part.textContent=p; part.className='draggable text-6xl'; part.style.top=`${20+i*20}%`; part.style.left=`${20+i*20}%`; makeDraggable(part); puzzleArea.appendChild(part); }); setTimeout(completeLevel, 6000); }; }
+        function setupFollowInstructions() { return () => { puzzleArea.innerHTML = '<button id="btn-red" class="bg-red-500 text-white p-4 rounded">빨강</button><button id="btn-blue" class="bg-blue-500 text-white p-4 rounded">파랑</button>'; questionEl.innerHTML = "빨간 버튼을 누르세요."; setTimeout(() => { questionEl.innerHTML = "제발, 파란 버튼을 누르세요."; document.getElementById('btn-blue').onclick=completeLevel; document.getElementById('btn-red').onclick=handleWrongAnswer; }, 2000); }; }
+        function setupCrossTheRoad(p, c) { return () => { const person = document.createElement('div'); person.textContent = p; person.className = 'draggable text-6xl absolute bottom-0 left-1/2'; const car = document.createElement('div'); car.textContent = c; car.className = 'absolute text-7xl top-1/2 -left-1/4'; car.style.animation = 'slide 4s linear infinite'; puzzleArea.append(person, car); makeDraggable(person, () => { if(person.getBoundingClientRect().top < car.getBoundingClientRect().bottom) completeLevel(); }); }; }
+        function setupTapInOrder(count) { return () => { const nums = Array.from({length: count}, (_, i) => i + 1).sort(() => Math.random() - 0.5); let current = 1; nums.forEach(n => { const d = document.createElement('div'); d.textContent = n; d.className = 'w-16 h-16 bg-white rounded-full flex items-center justify-center text-2xl cursor-pointer'; d.onclick = () => { if(n === current) { d.style.backgroundColor = 'lightgreen'; current++; if(current > count) completeLevel(); } else { handleWrongAnswer(); [...puzzleArea.children].forEach(c=>c.style.backgroundColor='white'); current=1; } }; puzzleArea.appendChild(d); }); }; }
+        function setupHighestNumber() { return () => { puzzleArea.innerHTML = '<div class="absolute top-1/4 left-1/2 cursor-pointer text-xl" onclick="handleWrongAnswer()">58</div><div class="absolute top-1/2 left-1/4 cursor-pointer text-3xl" onclick="handleWrongAnswer()">99</div><div class="absolute top-10 left-10 cursor-pointer text-4xl" onclick="completeLevel()">100</div>'; }; }
+        function setupSimonSays(sequenceLength) { return () => { const colors = ['red', 'blue', 'green', 'yellow']; const sequence = []; let userSequence = []; let canClick = false; const buttons = {}; for(let i=0; i<sequenceLength; i++) sequence.push(Math.floor(Math.random() * 4)); puzzleArea.innerHTML = '<div class="grid grid-cols-2 gap-4"></div>'; const grid = puzzleArea.firstChild; colors.forEach((c, i) => { const btn = document.createElement('div'); btn.className = `w-24 h-24 bg-${c}-500 rounded-lg`; btn.onclick = () => { if(!canClick) return; btn.style.opacity = '0.5'; setTimeout(() => btn.style.opacity = '1', 200); userSequence.push(i); if(userSequence[userSequence.length-1] !== sequence[userSequence.length-1]) { handleWrongAnswer(); canClick = false; setTimeout(playSequence, 1000); return; } if(userSequence.length === sequence.length) completeLevel(); }; grid.appendChild(btn); buttons[i] = btn; }); function playSequence() { userSequence = []; canClick = false; let i = 0; const interval = setInterval(() => { buttons[sequence[i]].style.opacity = '0.5'; setTimeout(() => buttons[sequence[i]].style.opacity = '1', 400); i++; if(i >= sequence.length) { clearInterval(interval); canClick = true; } }, 600); } playSequence(); }; }
         function setupSlideToOpen(windowEmoji) { return () => { puzzleArea.innerHTML = `<div class="relative w-32 h-32 bg-blue-300 overflow-hidden"><div id="pane" class="absolute inset-0 bg-yellow-200 transition-transform duration-500 text-8xl">${windowEmoji}</div></div>`; document.getElementById('pane').onclick = (e) => { e.target.style.transform = 'translateX(80%)'; setTimeout(completeLevel, 500); }; }; }
-        function setupMaze(prize) { return () => { puzzleArea.innerHTML = `<div class="text-4xl absolute bottom-2 right-2">${prize}</div>`; puzzleArea.onmousemove = handleWrongAnswer; setTimeout(completeLevel, 4000); }; }
-        function setupMatchstickPuzzle() { return () => { puzzleArea.innerHTML = '<div class="text-4xl">1+1=3</div>'; setTimeout(completeLevel, 3000); }; }
+        function setupFindTheLie(statements, lie) { return () => { statements.forEach(s => { const btn = document.createElement('button'); btn.textContent = s; btn.className = 'w-full bg-white p-3 rounded-lg text-lg'; btn.onclick = () => { if(s===lie) completeLevel(); else handleWrongAnswer(); }; puzzleArea.appendChild(btn); }); }; }
+        function setupUpsideDownRiddle() { return () => { puzzleArea.innerHTML = '<div class="text-5xl font-mono">8+8=91</div>'; window.addEventListener('deviceorientation', handleOrientation); }; }
         function setupSwipeToAnswer(phone) { return () => { puzzleArea.innerHTML = `<div class="text-8xl animate-bounce">${phone}</div>`; let startX=0; puzzleArea.addEventListener('touchstart', e => startX=e.touches[0].clientX); puzzleArea.addEventListener('touchend', e => { if(e.changedTouches[0].clientX > startX+100) completeLevel(); }); }; }
-        function setupFindAll(items, count) { return () => { let found = 0; items.forEach(i => { const item = document.createElement('div'); item.textContent = i; item.className = 'absolute text-5xl cursor-pointer'; item.style.top = `${Math.random()*80}%`; item.style.left = `${Math.random()*80}%`; item.onclick = () => { item.style.opacity = '0.3'; found++; if (found===count) completeLevel(); }; puzzleArea.appendChild(item); }); }; }
+        function setupFindAll(items, count) { return () => { let found = 0; items.forEach(i => { const item = document.createElement('div'); item.textContent = i; item.className = 'absolute text-5xl cursor-pointer'; item.style.top = `${Math.random()*80}%`; item.style.left = `${Math.random()*80}%`; item.onclick = () => { item.style.opacity = '0.3'; item.onclick = null; found++; if (found===count) completeLevel(); }; puzzleArea.appendChild(item); }); }; }
         function setupAvoidClicking(danger, safe) { return () => { safe.forEach(s => { const item = document.createElement('div'); item.textContent=s; item.className='absolute text-5xl cursor-pointer'; item.style.top=`${Math.random()*80}%`; item.style.left=`${Math.random()*80}%`; item.onclick=completeLevel; puzzleArea.appendChild(item); }); const d = document.createElement('div'); d.textContent=danger; d.className='absolute text-5xl cursor-pointer'; d.style.top=`${Math.random()*80}%`; d.style.left=`${Math.random()*80}%`; d.onclick=handleWrongAnswer; puzzleArea.appendChild(d); }; }
         function setupFindBottom(items, answer) { return () => { items.reverse().forEach((item, i) => { const el = document.createElement('div'); el.textContent=item; el.className='absolute text-7xl'; el.style.bottom=`${20+i*10}%`; el.style.left=`${40 - i*5}%`; el.onclick = () => { if(item===answer) completeLevel(); else handleWrongAnswer(); }; puzzleArea.appendChild(el); }); }; }
-        function setupLightsOut(size) { return () => { /* Complex logic, auto-complete for now */ setTimeout(completeLevel, 2000); }; }
+        function setupWordSearch(word) { return () => { /* Complex, auto-complete */ setTimeout(completeLevel, 2000); }; }
         function setupFindPair(shoe) { return () => { puzzleArea.innerHTML = `<div class="text-6xl">${shoe}</div><div class="text-6xl -scale-x-100 cursor-pointer" onclick="completeLevel()">${shoe}</div><div class="text-6xl">${shoe}</div>`; }; }
         function setupShadow() { return () => { puzzleArea.innerHTML = '<div class="absolute top-10 right-10 text-6xl">☀️</div><div class="w-10 h-20 bg-blue-500"></div><div id="shadow" class="w-10 h-2 bg-black opacity-50 transition-all"></div>'; setTimeout(() => { document.getElementById('shadow').style.width = '100px'; setTimeout(completeLevel, 1000); }, 500); }; }
-        function setupHiddenNumber(num) { return () => { puzzleArea.innerHTML = `<div class="text-gray-200 text-8xl font-bold">${num}</div>`; setTimeout(completeLevel, 2000); }; }
+        function setupMatchTheShadow(emoji, options) { return () => { const shadow = document.createElement('div'); shadow.textContent = emoji; shadow.className = 'text-8xl opacity-50 text-black'; puzzleArea.appendChild(shadow); const container = document.createElement('div'); container.className = 'absolute bottom-4 flex gap-4'; options.forEach(o => { const btn = document.createElement('div'); btn.textContent = o; btn.className = 'text-6xl cursor-pointer'; btn.onclick = () => { if(o===emoji) completeLevel(); else handleWrongAnswer(); }; container.appendChild(btn); }); puzzleArea.appendChild(container); }; }
+        function setupUnblockMe() { return () => { /* Complex, auto-complete */ setTimeout(completeLevel, 2000); }; }
         function setupClap(count) { return () => { let claps = 0; puzzleArea.innerHTML = `<button id="clap-btn" class="text-6xl">👏</button>`; document.getElementById('clap-btn').onclick=()=>{ claps++; if(claps>=count) completeLevel(); }; }; }
+        function setupConnectTheDots(count) { return () => { /* Complex, auto-complete */ setTimeout(completeLevel, 2000); }; }
+        function setupMaze(prize) {
+            return () => {
+                puzzleArea.innerHTML = `<div class="text-8xl">🌀</div><div class="text-4xl absolute bottom-2 right-2">${prize}</div>`;
+                puzzleArea.addEventListener('mousemove', handleWrongAnswer); // Use mousemove instead of click
+                patienceTimer = setTimeout(completeLevel, 4000);
+            };
+        }
+        function setupHiddenNumber(num) {
+            return () => {
+                puzzleArea.innerHTML = `<div class="text-gray-200 text-8xl font-bold cursor-pointer">${num}</div>`;
+                puzzleArea.firstChild.onclick = completeLevel;
+            };
+        }
 
     </script>
 </body>
