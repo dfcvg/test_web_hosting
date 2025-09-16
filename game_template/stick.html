@@ -6,14 +6,12 @@
     <title>스틱 히어로</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 기본 스타일 및 폰트 설정 */
         body {
             font-family: 'Inter', sans-serif;
-            touch-action: none; /* 모바일에서 더블 탭으로 확대되는 것을 방지 */
-            overflow: hidden; /* 스크롤 방지 */
-            position: fixed; /* 전체 화면 고정 */
+            touch-action: none;
+            overflow: hidden;
+            position: fixed;
         }
-        /* 게임 캔버스 컨테이너 */
         #game-container {
             width: 100vw;
             height: 100vh;
@@ -25,13 +23,9 @@
             background-color: #d0f4f7;
             display: block;
         }
-        /* 게임 오버 및 시작 화면 스타일 */
         #info-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -39,69 +33,47 @@
             color: white;
             text-align: center;
             background-color: rgba(0,0,0,0.3);
-            pointer-events: none; /* 화면 뒤의 캔버스 클릭을 허용 */
+            pointer-events: none;
+            transition: opacity 0.3s;
         }
-
-        #info-overlay.interactive {
-            pointer-events: auto; /* 게임오버 시 클릭 가능하도록 설정 */
-        }
-
+        #info-overlay.interactive { pointer-events: auto; }
         #score {
             position: absolute;
-            top: 5vh;
-            font-size: 5rem;
-            font-weight: bold;
-            color: white;
-            opacity: 0.5;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            -webkit-user-select: none; /* 텍스트 선택 방지 */
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            display: none; /* 게임 시작 전엔 숨김 */
+            top: 5vh; font-size: 5rem; font-weight: bold; color: white;
+            opacity: 0.5; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            user-select: none; display: none;
         }
-
         .text-container {
             background-color: rgba(0, 0, 0, 0.5);
-            padding: 2rem 4rem;
-            border-radius: 1rem;
+            padding: 2rem 4rem; border-radius: 1rem;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
-        .text-container h1 {
-            font-size: 3rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
+        .text-container h1 { font-size: 3rem; font-weight: bold; margin-bottom: 0.5rem; }
+        .text-container p { font-size: 1.2rem; margin-bottom: 1.5rem; }
+        .menu-button {
+            background-color: #4CAF50; color: white; padding: 1rem 2rem;
+            border: none; border-radius: 0.5rem; font-size: 1.2rem;
+            cursor: pointer; margin: 0.5rem; transition: background-color 0.3s;
         }
-        .text-container p {
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
+        .menu-button:hover { background-color: #45a049; }
+        
+        #stage-select-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .stage-button {
+            background-color: #3498db; width: 80px; height: 80px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border-radius: 0.5rem; cursor: pointer; transition: transform 0.2s;
         }
-        .mode-button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 0.5rem;
-            font-size: 1.2rem;
-            cursor: pointer;
-            margin: 0.5rem;
-            transition: background-color 0.3s;
-        }
-        .mode-button:hover {
-            background-color: #45a049;
-        }
-
+        .stage-button:hover { transform: scale(1.05); }
+        .stage-button.locked { background-color: #95a5a6; cursor: not-allowed; }
+        .stage-button span:first-child { font-size: 1.5rem; font-weight: bold; }
+        .stage-button span:last-child { font-size: 0.8rem; }
     </style>
 </head>
 <body class="bg-gray-800 m-0 p-0 overflow-hidden">
-
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="score">0</div>
-        <!-- 게임 시작/종료 정보 오버레이 -->
-        <div id="info-overlay" class="interactive">
-            <!-- 초기 메뉴 UI는 스크립트에서 동적으로 생성 -->
-        </div>
+        <div id="info-overlay" class="interactive"></div>
     </div>
 
     <script>
@@ -111,52 +83,88 @@
         const infoOverlay = document.getElementById('info-overlay');
         
         let devicePixelRatio = window.devicePixelRatio || 1;
+        let score = 0, platforms = [], stick = {}, stickman = {}, particles = [], floatingScores = [], obstacles = [];
+        let gameState = 'menu'; // menu, waiting, growing, falling, walking, walking_to_fall, sliding, bouncing, transitioning, falling_death, over, story_win
+        let gameMode = 'infinite', storyProgress = 0, currentStage = 0;
+        let unlockedStages = 1; // 1단계만 열린 상태로 시작
+        
+        const storyStages = [
+            { goal: 5, features: [] }, // Stage 1: 기본
+            { goal: 7, features: ['moving'] }, // Stage 2: 움직이는 발판
+            { goal: 8, features: ['moving', 'ice'] }, // Stage 3: +얼음 발판
+            { goal: 10, features: ['moving', 'ice', 'trampoline'] }, // Stage 4: +트램펄린
+            { goal: 12, features: ['moving', 'ice', 'trampoline', 'breaking'] }, // Stage 5: +부서지는 발판
+            { goal: 15, features: ['moving', 'ice', 'trampoline', 'breaking', 'bird'] } // Stage 6: +새 장애물
+        ];
+        
+        let characterStartX;
+        const platformHeight = 200, stickWidth = 5, stickGrowSpeed = 4, stickFallSpeed = 0.1, stickmanWalkSpeed = 2.5, worldShiftSpeed = 3;
 
-        let score = 0;
-        let platforms = [];
-        let stick = {};
-        let stickman = {};
-        let particles = [];
-        let floatingScores = [];
-        let gameState = 'menu'; // menu, waiting, growing, falling, walking, walking_to_fall, transitioning, falling_death, over, story_win
-        let gameMode = 'infinite'; // infinite, story
-        let storyProgress = 0;
-        const storyGoal = 10; // 스토리 모드 목표 징검다리 개수
-
-        let characterStartX; 
-
-        // 게임 설정
-        const platformHeight = 200;
-        const stickmanWidth = 20;
-        const stickmanHeight = 30;
-        const stickWidth = 5;
-        const stickGrowSpeed = 4;
-        const stickFallSpeed = 0.1; 
-        const stickmanWalkSpeed = 2.5;
-        const worldShiftSpeed = 3;
-        const perfectBonusPointX = 5; // 퍼펙트 존 너비
-
+        // --- UI 함수들 ---
         function showMenu() {
             gameState = 'menu';
             infoOverlay.classList.add('interactive');
             scoreDisplay.style.display = 'none';
             infoOverlay.innerHTML = `
                 <div class="text-container">
-                    <h1>스틱 히어로</h1>
-                    <p>플레이할 모드를 선택하세요</p>
-                    <button id="storyModeBtn" class="mode-button">스토리 모드 (목표: ${storyGoal}개)</button>
-                    <button id="infiniteModeBtn" class="mode-button">무한 모드</button>
-                </div>
-            `;
-            document.getElementById('storyModeBtn').addEventListener('click', () => startGame('story'));
+                    <h1>스틱 히어로</h1><p>플레이할 모드를 선택하세요</p>
+                    <button id="storyModeBtn" class="menu-button">스토리 모드</button>
+                    <button id="infiniteModeBtn" class="menu-button">무한 모드</button>
+                </div>`;
+            document.getElementById('storyModeBtn').addEventListener('click', showStageSelection);
             document.getElementById('infiniteModeBtn').addEventListener('click', () => startGame('infinite'));
         }
 
-        function startGame(mode) {
+        function showStageSelection() {
+            let stageButtonsHTML = '';
+            for (let i = 0; i < storyStages.length; i++) {
+                const isLocked = i + 1 > unlockedStages;
+                stageButtonsHTML += `
+                    <div class="stage-button ${isLocked ? 'locked' : ''}" data-stage="${i}">
+                        <span>${i + 1}</span><span>${isLocked ? 'Locked' : 'Go!'}</span>
+                    </div>`;
+            }
+            infoOverlay.innerHTML = `
+                <div class="text-container">
+                    <h1>스테이지 선택</h1>
+                    <div id="stage-select-container">${stageButtonsHTML}</div>
+                    <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem;">뒤로가기</button>
+                </div>`;
+            document.querySelectorAll('.stage-button:not(.locked)').forEach(btn => {
+                btn.addEventListener('click', () => startGame('story', parseInt(btn.dataset.stage)));
+            });
+            document.getElementById('backToMenuBtn').addEventListener('click', showMenu);
+        }
+        
+        function showGameOver() {
+             gameState = 'over';
+             infoOverlay.classList.add('interactive');
+             infoOverlay.innerHTML = `
+                 <div class="text-container">
+                    <h1>게임 오버</h1>
+                    <p>점수: ${score}<br>메뉴로 돌아가려면 터치하세요</p>
+                </div>
+            `;
+        }
+
+        function showWinScreen() {
+             gameState = 'story_win';
+             infoOverlay.classList.add('interactive');
+             infoOverlay.innerHTML = `
+                 <div class="text-container">
+                    <h1>스테이지 클리어!</h1>
+                    <p>축하합니다!<br>메뉴로 돌아가려면 터치하세요</p>
+                </div>
+            `;
+        }
+
+        function startGame(mode, stage = 0) {
             gameMode = mode;
+            currentStage = stage;
             init();
         }
 
+        // --- 초기화 및 리사이즈 ---
         function resizeCanvas() {
             devicePixelRatio = window.devicePixelRatio || 1;
             canvas.width = window.innerWidth * devicePixelRatio;
@@ -165,83 +173,173 @@
             canvas.style.height = `${window.innerHeight}px`;
             ctx.scale(devicePixelRatio, devicePixelRatio);
         }
+        
+        function init() {
+            resizeCanvas();
+            score = 0; storyProgress = 0;
+            scoreDisplay.textContent = score; scoreDisplay.style.display = 'block';
+            platforms = []; particles = []; floatingScores = []; obstacles = [];
+            
+            const initialPlatformWidth = 150;
+            characterStartX = initialPlatformWidth - 50;
+            platforms.push({ x: 0, width: initialPlatformWidth, isStartPlatform: true, type: 'normal' });
+            
+            if (gameMode === 'story') {
+                for(let i = 0; i < storyStages[currentStage].goal; i++) { addPlatform(i); }
+                if(platforms.length > 1) platforms[platforms.length-1].isGoal = true;
+            } else {
+                while(platforms[platforms.length-1].x + platforms[platforms.length-1].width < canvas.width / devicePixelRatio) { addPlatform(); }
+            }
 
+            stickman = { x: characterStartX, y: canvas.height / devicePixelRatio - platformHeight, animFrame: 0, animTimer: 0, vy: 0, slideX: 0 };
+            resetStick();
+            
+            gameState = 'waiting';
+            infoOverlay.classList.remove('interactive');
+            infoOverlay.innerHTML = '';
+            draw();
+        }
+        
+        function resetStick() {
+            const currentPlatform = platforms[0];
+            stick = {
+                x: currentPlatform.x + currentPlatform.width,
+                y: canvas.height / devicePixelRatio - platformHeight,
+                length: 0,
+                rotation: 0
+            };
+        }
+
+        // --- 게임 요소 생성 ---
         function addPlatform(levelIndex = -1) {
             const lastPlatform = platforms[platforms.length - 1];
-            const minGap = 40;
-            const maxGap = 200;
-            const minWidth = 40;
-            const maxWidth = 120;
+            
+            // 화면 너비에 맞춰 징검다리 사이의 최대 거리를 동적으로 조절합니다.
+            const gameScreenWidth = canvas.width / devicePixelRatio;
+            const availableWidth = gameScreenWidth - (characterStartX || 100); // 캐릭터 위치부터 화면 끝까지의 거리
+            const maxDynamicGap = availableWidth - 80; // 다음 징검다리가 보일 여유 공간 확보
 
-            const gap = Math.random() * (maxGap - minGap) + minGap;
-            const width = Math.random() * (maxWidth - minWidth) + minWidth;
+            const maxGap = Math.min(200, maxDynamicGap); // 최대 거리는 200을 넘지 않도록 설정
+            const minGap = 40;
+
+            const gap = Math.random() * (Math.max(maxGap, minGap) - minGap) + minGap;
+            const width = Math.random() * 80 + 40;
             const x = lastPlatform.x + lastPlatform.width + gap;
             
-            const newPlatform = { 
-                x, 
-                width, 
-                perfectX: x + (width / 2) - (perfectBonusPointX / 2), 
-                perfectWidth: perfectBonusPointX,
-                type: 'normal', // 'normal', 'moving_x'
-                hasCoin: false,
-                isCoinCollected: false
-            };
+            const newPlatform = { x, width, type: 'normal', hasCoin: false, isCoinCollected: false };
+            const features = gameMode === 'story' ? storyStages[currentStage].features : ['moving', 'ice', 'trampoline', 'breaking', 'bird'];
+            const difficulty = gameMode === 'story' ? levelIndex : score;
 
-            // 스토리 모드 레벨에 따라 기능 추가
-            if (gameMode === 'story') {
-                // 레벨 2 이상: 움직이는 징검다리 등장 (30% 확률)
-                if (levelIndex >= 2 && Math.random() < 0.3) {
-                    newPlatform.type = 'moving_x';
-                    newPlatform.startX = x;
-                    newPlatform.moveRange = Math.random() * 40 + 30; // 30-70px 범위
+            if (difficulty >= 0) { 
+                const availableTypes = [];
+                if (features.includes('moving') && difficulty >= 1) availableTypes.push('moving_x');
+                if (features.includes('ice') && difficulty >= 2) availableTypes.push('ice');
+                if (features.includes('trampoline') && difficulty >= 3) availableTypes.push('trampoline');
+                if (features.includes('breaking') && difficulty >= 4) availableTypes.push('breaking');
+
+                if (availableTypes.length > 0 && Math.random() < 0.4) {
+                    newPlatform.type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+                }
+
+                if (newPlatform.type === 'moving_x') {
+                    newPlatform.startX = x; newPlatform.moveRange = Math.random() * 40 + 30;
                     newPlatform.moveSpeed = (Math.random() * 0.8 + 0.4) * (Math.random() > 0.5 ? 1 : -1);
+                } else if (newPlatform.type === 'breaking') {
+                    newPlatform.breakTimer = 180; // 3초
                 }
-                // 레벨 4 이상: 코인 등장 (40% 확률)
-                if (levelIndex >= 4 && Math.random() < 0.4) {
-                    newPlatform.hasCoin = true;
+                
+                if (features.includes('bird') && difficulty >= 5 && Math.random() < 0.15) {
+                    addObstacle();
                 }
             }
-
             platforms.push(newPlatform);
-            
-            if (gameMode === 'infinite' && platforms.length > 5) {
-                platforms.shift();
-            }
+        }
+        
+        function addObstacle() {
+            const y = canvas.height / devicePixelRatio - platformHeight - (Math.random() * 150 + 50);
+            const x = canvas.width / devicePixelRatio + 30;
+            obstacles.push({ x, y, vx: -(Math.random() * 1 + 1), width: 30, height: 20 });
+        }
+
+
+        // --- 그리기 함수들 ---
+        function drawPlatforms() {
+            platforms.forEach(p => {
+                const platformY = canvas.height / devicePixelRatio - platformHeight;
+                ctx.fillStyle = '#4a4a4a'; // 기본 색상
+                if (p.type === 'moving_x') ctx.fillStyle = '#6D28D9';
+                else if (p.type === 'ice') ctx.fillStyle = '#a2d2ff';
+                else if (p.type === 'trampoline') ctx.fillStyle = '#2ecc71';
+                else if (p.type === 'breaking') ctx.fillStyle = `rgba(230, 126, 34, ${p.breakTimer/180})`;
+                ctx.fillRect(p.x, platformY, p.width, platformHeight);
+                
+                if (p.type === 'breaking' && p.breakTimer < 180) { // 금 및 카운트다운 그리기
+                    ctx.strokeStyle = `rgba(0,0,0,${1 - p.breakTimer/180})`; ctx.lineWidth = 2; ctx.beginPath();
+                    ctx.moveTo(p.x + 5, platformY + 5); ctx.lineTo(p.x + p.width - 5, platformY + 15);
+                    ctx.moveTo(p.x + p.width/2, platformY + 5); ctx.lineTo(p.x + p.width/2, platformY + 20); ctx.stroke();
+                    
+                    const secondsLeft = Math.ceil(p.breakTimer / 60);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(secondsLeft, p.x + p.width / 2, platformY + 40);
+                }
+                if (p.isStartPlatform) { ctx.fillStyle = '#27ae60'; ctx.fillRect(p.x, platformY, p.width, 15); }
+                if (gameMode === 'story' && p.isGoal) {
+                    ctx.fillStyle = 'gold'; ctx.fillRect(p.x, platformY, p.width, 15);
+                    ctx.fillStyle = '#e74c3c'; ctx.fillRect(p.x + p.width/2 - 2, platformY - 50, 4, 50); ctx.beginPath();
+                    ctx.moveTo(p.x + p.width/2 + 2, platformY - 50); ctx.lineTo(p.x + p.width/2 + 2, platformY - 30);
+                    ctx.lineTo(p.x + p.width/2 + 22, platformY - 40); ctx.fill();
+                }
+            });
+        }
+        
+        function drawObstacles() {
+            obstacles.forEach(o => {
+                ctx.save();
+                ctx.translate(o.x, o.y);
+                ctx.fillStyle = '#34495e'; 
+                ctx.beginPath();
+                const flap = Math.sin(Date.now() / 100) * 10;
+                ctx.moveTo(0, o.height / 2);
+                ctx.quadraticCurveTo(o.width / 2, o.height / 2 - o.height + flap, o.width, o.height / 2);
+                ctx.quadraticCurveTo(o.width / 2, o.height / 2 + o.height + flap, 0, o.height / 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawStick() {
+            if (!stick.length) return;
+            ctx.save();
+            ctx.strokeStyle = '#63473b';
+            ctx.lineWidth = stickWidth;
+            ctx.translate(stick.x, stick.y);
+            ctx.rotate(stick.rotation);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -stick.length);
+            ctx.stroke();
+            ctx.restore();
         }
         
         function drawCharacter() {
             ctx.save();
             ctx.translate(stickman.x, stickman.y);
-
-            if(gameState === 'story_win' && Math.floor(Date.now() / 200) % 2 === 0) {
-                 ctx.translate(0, -10);
-            }
+            if (gameState === 'bouncing') ctx.rotate(Math.sin(stickman.vy * 0.5) * 0.3);
+            if(gameState === 'story_win' && Math.floor(Date.now() / 200) % 2 === 0) ctx.translate(0, -10);
 
             const bodyColor = '#d63031';
-            ctx.fillStyle = bodyColor;
-            ctx.beginPath();
-            ctx.arc(0, -20, 15, Math.PI, 0);
-            ctx.fillRect(-15, -20, 30, 15);
-            ctx.fill();
-
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(-6, -22, 4, 0, Math.PI * 2);
-            ctx.arc(6, -22, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(-5, -22, 2, 0, Math.PI * 2);
-            ctx.arc(7, -22, 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
+            ctx.fillStyle = bodyColor; ctx.beginPath();
+            ctx.arc(0, -20, 15, Math.PI, 0); ctx.fillRect(-15, -20, 30, 15); ctx.fill();
+            ctx.fillStyle = 'white'; ctx.beginPath();
+            ctx.arc(-6, -22, 4, 0, Math.PI * 2); ctx.arc(6, -22, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'black'; ctx.beginPath();
+            ctx.arc(-5, -22, 2, 0, Math.PI * 2); ctx.arc(7, -22, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 5; ctx.lineCap = 'round';
             
-            const isWalking = gameState === 'walking' || gameState === 'walking_to_fall';
+            const isWalking = gameState === 'walking' || gameState === 'sliding' || gameState === 'walking_to_fall';
             const legY = -5;
-
             if (isWalking) {
                 if (stickman.animFrame === 0) {
                     ctx.beginPath(); ctx.moveTo(-7, legY); ctx.lineTo(-12, legY + 10); ctx.stroke();
@@ -254,396 +352,148 @@
                 ctx.beginPath(); ctx.moveTo(-7, legY); ctx.lineTo(-7, legY + 10); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(7, legY); ctx.lineTo(7, legY + 10); ctx.stroke();
             }
-            
             ctx.restore();
         }
 
-        function drawPlatforms() {
-            platforms.forEach(p => {
-                const platformY = canvas.height / devicePixelRatio - platformHeight;
-                
-                // 타입별 색상
-                if (p.type === 'moving_x') {
-                    ctx.fillStyle = '#6D28D9'; // 움직이는 발판은 보라색
-                } else {
-                    ctx.fillStyle = '#4a4a4a';
-                }
-                ctx.fillRect(p.x, platformY, p.width, platformHeight);
-                
-                if (p.isStartPlatform) {
-                    ctx.fillStyle = '#27ae60';
-                    ctx.fillRect(p.x, platformY, p.width, 15);
-                }
-                
-                if (gameMode === 'story' && p.isGoal) {
-                    ctx.fillStyle = 'gold';
-                    ctx.fillRect(p.x, platformY, p.width, 15);
-                    ctx.fillStyle = '#e74c3c';
-                    ctx.fillRect(p.x + p.width/2 - 2, platformY - 50, 4, 50);
-                    ctx.beginPath();
-                    ctx.moveTo(p.x + p.width/2 + 2, platformY - 50);
-                    ctx.lineTo(p.x + p.width/2 + 2, platformY - 30);
-                    ctx.lineTo(p.x + p.width/2 + 22, platformY - 40);
-                    ctx.fill();
-                }
-
-                ctx.fillStyle = '#ff4757';
-                ctx.fillRect(p.perfectX, platformY, p.perfectWidth, 5);
-
-                // 코인 그리기
-                if (p.hasCoin && !p.isCoinCollected) {
-                    ctx.fillStyle = 'gold';
-                    ctx.beginPath();
-                    ctx.arc(p.x + p.width / 2, platformY - 20, 10, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#f39c12';
-                    ctx.font = 'bold 12px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('C', p.x + p.width / 2, platformY - 20);
-                }
-            });
-        }
+        function createWinConfetti() { for(let i=0; i<100; i++) particles.push({ x: Math.random() * (canvas.width/devicePixelRatio), y: -Math.random()*(canvas.height/devicePixelRatio), size: Math.random()*8+4, speedX: 0, speedY: Math.random()*3+2, life: 200, color: `hsl(${Math.random()*360}, 100%, 50%)` }); }
+        function updateParticles() { for(let i=particles.length-1; i>=0; i--) { const p=particles[i]; p.x+=p.speedX; p.y+=p.speedY; p.life--; if(p.life<=0) particles.splice(i,1); } }
+        function drawParticles() { particles.forEach(p => { ctx.fillStyle=p.color; ctx.globalAlpha=Math.max(0,p.life/60); ctx.fillRect(p.x,p.y,p.size,p.size); }); ctx.globalAlpha=1.0; }
         
-        function drawStick() {
-            if (!stick.length) return;
-            
-            ctx.save();
-            ctx.strokeStyle = '#63473b';
-            ctx.lineWidth = stickWidth;
-            ctx.translate(stick.x, stick.y);
-            ctx.rotate(stick.rotation);
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(0, -stick.length);
-            ctx.stroke();
-            ctx.restore();
-        }
+        function updateFloatingScores() { for(let i=floatingScores.length-1; i>=0; i--) { const fs=floatingScores[i]; fs.y-=0.5; fs.life--; fs.opacity=fs.life/60; if(fs.life<=0) floatingScores.splice(i,1); } }
+        function drawFloatingScores() { floatingScores.forEach(fs => { ctx.fillStyle=`rgba(255,255,255,${fs.opacity})`; ctx.font='bold 20px sans-serif'; ctx.textAlign='center'; ctx.fillText(fs.text,fs.x,fs.y); }); }
 
-        function createWinConfetti() {
-            for(let i=0; i<100; i++) {
-                particles.push({
-                    x: Math.random() * (canvas.width / devicePixelRatio),
-                    y: -Math.random() * (canvas.height / devicePixelRatio),
-                    size: Math.random() * 8 + 4,
-                    speedX: 0,
-                    speedY: Math.random() * 3 + 2,
-                    life: 200, // 오래 지속되도록
-                    color: `hsl(${Math.random() * 360}, 100%, 50%)`
-                });
-            }
-        }
-
-        function createCoinBurst(x, y) {
-             for(let i=0; i<20; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 3 + 1;
-                particles.push({
-                    x, y,
-                    size: Math.random() * 3 + 1,
-                    speedX: Math.cos(angle) * speed,
-                    speedY: Math.sin(angle) * speed,
-                    life: 40, // 짧게 반짝이도록
-                    color: 'gold'
-                });
-            }
-        }
-
-        function drawParticles() {
-            particles.forEach(p => {
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life / 60; // 수명에 따라 투명도 조절
-                ctx.fillRect(p.x, p.y, p.size, p.size);
-            });
-            ctx.globalAlpha = 1.0;
-        }
-        
-        function updateParticles() {
-            for(let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.x += p.speedX;
-                p.y += p.speedY;
-                p.life--;
-                if(p.life <= 0) {
-                    particles.splice(i, 1);
-                }
-            }
-        }
-
-        function drawFloatingScores() {
-            floatingScores.forEach(fs => {
-                ctx.fillStyle = `rgba(255, 255, 255, ${fs.opacity})`;
-                ctx.font = 'bold 20px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(fs.text, fs.x, fs.y);
-            });
-        }
-        
-        function updateFloatingScores() {
-             for(let i = floatingScores.length - 1; i >= 0; i--) {
-                const fs = floatingScores[i];
-                fs.y -= 0.5;
-                fs.life--;
-                fs.opacity = fs.life / 60;
-                if(fs.life <= 0) {
-                    floatingScores.splice(i, 1);
-                }
-            }
-        }
-        
-        function init() {
-            resizeCanvas();
-            score = 0;
-            storyProgress = 0;
-            scoreDisplay.textContent = score;
-            scoreDisplay.style.display = 'block';
-            platforms = [];
-            particles = [];
-            floatingScores = [];
-            
-            const initialPlatformWidth = 150;
-            characterStartX = initialPlatformWidth - 50;
-            platforms.push({ x: 0, width: initialPlatformWidth, isStartPlatform: true });
-            
-            if (gameMode === 'story') {
-                 for(let i = 0; i < storyGoal; i++) { addPlatform(i); }
-                 platforms[platforms.length-1].isGoal = true;
-            } else {
-                 while(platforms[platforms.length-1].x + platforms[platforms.length-1].width < canvas.width / devicePixelRatio) {
-                    addPlatform();
-                 }
-            }
-
-            stickman = {
-                x: characterStartX,
-                y: canvas.height / devicePixelRatio - platformHeight,
-                animFrame: 0,
-                animTimer: 0
-            };
-            
-            resetStick();
-            
-            gameState = 'waiting';
-            infoOverlay.classList.remove('interactive');
-            infoOverlay.innerHTML = '';
-            
-            draw();
-        }
-        
-        function resetStick() {
-            const currentPlatform = platforms[0];
-            stick = {
-                x: currentPlatform.x + currentPlatform.width - stickWidth,
-                y: canvas.height / devicePixelRatio - platformHeight,
-                length: 0,
-                rotation: 0
-            };
-        }
-        
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
+        // --- 업데이트 함수들 ---
         function update() {
             updateParticles();
             updateFloatingScores();
 
-            // 움직이는 징검다리 위치 업데이트
-            if (gameState !== 'menu' && gameState !== 'over' && gameState !== 'story_win') {
+            if (gameState === 'waiting') { // 'walking' 상태를 제거하여, 다리를 놓기 시작하면 타이머가 멈추도록 수정
                 platforms.forEach(p => {
-                    if (p.type === 'moving_x') {
-                        p.x += p.moveSpeed;
-                        p.perfectX += p.moveSpeed; // 퍼펙트 존도 같이 이동
-                        if (Math.abs(p.x - p.startX) > p.moveRange) {
-                            p.moveSpeed *= -1;
+                    if (p.type === 'breaking' && p.breakTimer < 180) {
+                        p.breakTimer--;
+                        if (p.breakTimer <= 0) {
+                            p.width = 0; 
+                            if(platforms.indexOf(p) === 0) gameState = 'falling_death';
                         }
                     }
                 });
             }
+            
+            obstacles.forEach(o => { o.x += o.vx; });
+            obstacles = obstacles.filter(o => o.x > -o.width);
 
-            if (gameState === 'walking' || gameState === 'walking_to_fall') {
-                stickman.animTimer++;
-                if (stickman.animTimer > 6) { 
-                    stickman.animFrame = 1 - stickman.animFrame;
-                    stickman.animTimer = 0;
-                }
-            } else {
-                stickman.animTimer = 0;
-                stickman.animFrame = 0;
-            }
-
+            platforms.forEach(p => { if(p.type === 'moving_x') { p.x += p.moveSpeed; if(Math.abs(p.x - p.startX) > p.moveRange) p.moveSpeed *= -1; } });
+            
             if (gameState === 'growing') {
                 stick.length += stickGrowSpeed;
+                const stickTipY = stick.y - stick.length;
+                obstacles.forEach(o => { if(stick.x > o.x && stick.x < o.x + o.width && stickTipY < o.y + o.height && stickTipY > o.y) { stick.length = Math.max(0, stick.length - 20); gameState = 'falling'; } });
             } else if (gameState === 'falling') {
                 stick.rotation += stickFallSpeed;
-                if (stick.rotation >= Math.PI / 2) {
-                    stick.rotation = Math.PI / 2;
-                    checkLanding();
-                }
+                if (stick.rotation >= Math.PI / 2) { stick.rotation = Math.PI / 2; checkLanding(); }
             } else if (gameState === 'walking') {
-                const targetPlatform = platforms[1];
-                // 코인 획득 체크
-                if (targetPlatform && targetPlatform.hasCoin && !targetPlatform.isCoinCollected) {
-                    const coinX = targetPlatform.x + targetPlatform.width / 2;
-                    const coinY = canvas.height / devicePixelRatio - platformHeight - 20;
-                    if (Math.abs(stickman.x - coinX) < stickmanWalkSpeed * 2) {
-                        targetPlatform.isCoinCollected = true;
-                        score += 5; // 코인 점수
-                        scoreDisplay.textContent = gameMode === 'story' ? `${storyProgress}/${storyGoal}` : score;
-                        floatingScores.push({ x: coinX, y: coinY, text: '+5', opacity: 1, life: 60 });
-                        createCoinBurst(coinX, coinY);
+                if (++stickman.animTimer > 6) { stickman.animFrame = 1 - stickman.animFrame; stickman.animTimer = 0; }
+                const targetX = stick.x + stick.length - 15;
+                if (stickman.x < targetX) { stickman.x += stickmanWalkSpeed; }
+                else {
+                    stickman.x = targetX;
+                    const nextPlatform = platforms[1];
+                    if(gameMode === 'story' && nextPlatform && nextPlatform.isGoal) {
+                        if (currentStage + 1 < storyStages.length && unlockedStages <= currentStage + 1) unlockedStages = currentStage + 2;
+                        createWinConfetti(); showWinScreen();
+                    } else if (nextPlatform && nextPlatform.type === 'trampoline') {
+                        score += 2; 
+                        scoreDisplay.textContent = gameMode === 'story' ? `${storyProgress}/${storyStages[currentStage].goal}` : score;
+                        floatingScores.push({ x: nextPlatform.x + nextPlatform.width/2, y: canvas.height/devicePixelRatio - platformHeight, text: 'Bounce! +2', opacity: 1, life: 60 });
+                        gameState = 'bouncing'; stickman.vy = -10;
+                    } else if (nextPlatform && nextPlatform.type === 'ice') { 
+                        gameState = 'sliding'; 
+                        // 미끄러지는 거리는 발판 너비에 따라 약간의 무작위성을 가집니다.
+                        stickman.slideX = stickman.x + (nextPlatform.width * 0.5) + (Math.random() * 30);
+                    } else { 
+                        gameState = 'transitioning'; 
                     }
                 }
+            } else if (gameState === 'sliding') {
+                const currentIcePlatform = platforms[1];
+                if (!currentIcePlatform) { // 안전 장치
+                    gameState = 'transitioning';
+                    return;
+                }
+                const platformEdge = currentIcePlatform.x + currentIcePlatform.width;
 
-                const targetX = stick.x + stick.length - (stickmanWidth / 2) - 5;
-                if (stickman.x < targetX) {
-                    stickman.x += stickmanWalkSpeed;
-                } else {
-                    stickman.x = targetX;
-                    if(gameMode === 'story' && platforms[1].isGoal) {
-                        gameState = 'story_win';
-                        createWinConfetti();
-                        showWinScreen();
-                    } else {
-                       gameState = 'transitioning';
+                if (stickman.x < stickman.slideX) {
+                    stickman.x += stickmanWalkSpeed * 0.8; // 얼음 위에서 미끄러지는 속도
+                    // 징검다리 가장자리를 넘어갔는지 확인
+                    if (stickman.x > platformEdge) {
+                        gameState = 'falling_death';
                     }
+                } else {
+                    // 미끄러짐이 멈추고 다음 단계로
+                    stickman.slideX = 0;
+                    gameState = 'transitioning';
+                }
+            } else if (gameState === 'bouncing') {
+                 stickman.y += stickman.vy; stickman.vy += 0.5;
+                 if(stickman.y >= canvas.height / devicePixelRatio - platformHeight) { stickman.y = canvas.height / devicePixelRatio - platformHeight; gameState = 'transitioning'; }
+            } else if (gameState === 'transitioning') {
+                const targetPlatform = platforms[1];
+                if (!targetPlatform) return;
+                const shiftDistance = targetPlatform.x - characterStartX;
+                if(shiftDistance > 0) {
+                    const shiftAmount = Math.min(worldShiftSpeed, shiftDistance);
+                    platforms.forEach(p => { p.x -= shiftAmount; if(p.type === 'moving_x') p.startX -= shiftAmount; });
+                    stickman.x -= shiftAmount; stick.x -= shiftAmount; obstacles.forEach(o => o.x -= shiftAmount);
+                } else {
+                    platforms.shift();
+                    if(gameMode === 'infinite') addPlatform(score);
+                    resetStick(); gameState = 'waiting';
                 }
             } else if (gameState === 'walking_to_fall') {
-                const fallTargetX = stick.x + stick.length;
-                if (stickman.x < fallTargetX) {
-                    stickman.x += stickmanWalkSpeed;
-                } else {
-                    stickman.x = fallTargetX;
-                    gameState = 'falling_death';
-                }
-            } else if (gameState === 'transitioning') {
-                 const targetPlatform = platforms[1];
-                 if (!targetPlatform) return;
-
-                 const shiftDistance = targetPlatform.x - characterStartX;
-                 
-                 if (shiftDistance > 0) {
-                     const shiftAmount = Math.min(worldShiftSpeed, shiftDistance);
-                     platforms.forEach(p => {
-                        p.x -= shiftAmount;
-                        if(p.type === 'moving_x') p.startX -= shiftAmount;
-                        p.perfectX -= shiftAmount;
-                     });
-                     stickman.x -= shiftAmount;
-                     stick.x -= shiftAmount;
-                 } else {
-                    platforms.shift();
-                     if (gameMode === 'infinite') { 
-                        addPlatform(); 
-                    }
-                     resetStick();
-                     gameState = 'waiting';
-                 }
+                if (stickman.x < stick.x + stick.length) stickman.x += stickmanWalkSpeed; else gameState = 'falling_death';
             } else if (gameState === 'falling_death') {
-                stickman.y += 8;
-                stick.rotation += 0.02;
-                 if (stickman.y > canvas.height / devicePixelRatio + 100) {
-                     gameState = 'over';
-                     showGameOver();
-                 }
-            } else if (gameState === 'story_win') {
-                // confetti는 updateParticles에서 처리
+                stickman.y += 8; if(stickman.y > canvas.height/devicePixelRatio + 50) showGameOver();
             }
         }
 
         function checkLanding() {
             const nextPlatform = platforms[1];
+            if (!nextPlatform) { gameState = 'walking_to_fall'; return; }
             const stickEnd = stick.x + stick.length;
-            const perfectStart = nextPlatform.perfectX;
-            const perfectEnd = nextPlatform.perfectX + nextPlatform.perfectWidth;
 
             if (stickEnd >= nextPlatform.x && stickEnd <= nextPlatform.x + nextPlatform.width) {
-                 // 착지 성공 시, 움직이는 징검다리 멈춤
-                 if (nextPlatform.type === 'moving_x') {
-                    nextPlatform.moveSpeed = 0;
-                 }
-
+                 if (nextPlatform.type === 'moving_x') nextPlatform.moveSpeed = 0;
+                 if (nextPlatform.type === 'breaking') nextPlatform.breakTimer--; // 착지하자마자 카운트 시작
                  gameState = 'walking';
-                 if (!nextPlatform.isGoal) {
-                    score++;
-                    storyProgress++;
-                 }
-                 if(stickEnd >= perfectStart && stickEnd <= perfectEnd) {
-                     score++;
-                 }
-                 scoreDisplay.textContent = gameMode === 'story' ? `${storyProgress}/${storyGoal}` : score;
+                 storyProgress++; score++;
+                 scoreDisplay.textContent = gameMode === 'story' ? `${storyProgress}/${storyStages[currentStage].goal}` : score;
             } else { 
                 gameState = 'walking_to_fall';
             }
         }
         
-        function showGameOver() {
-             infoOverlay.classList.add('interactive');
-             infoOverlay.innerHTML = `
-                 <div class="text-container">
-                    <h1>게임 오버</h1>
-                    <p>점수: ${score}<br>메뉴로 돌아가려면 터치하세요</p>
-                </div>
-            `;
-        }
-
-        function showWinScreen() {
-             infoOverlay.classList.add('interactive');
-             infoOverlay.innerHTML = `
-                 <div class="text-container">
-                    <h1>미션 성공!</h1>
-                    <p>축하합니다!<br>메뉴로 돌아가려면 터치하세요</p>
-                </div>
-            `;
-        }
-
         function draw() {
             ctx.clearRect(0, 0, canvas.width / devicePixelRatio, canvas.height / devicePixelRatio);
-            drawPlatforms();
-            drawStick();
-            drawCharacter();
-            drawParticles();
-            drawFloatingScores();
+            drawPlatforms(); drawObstacles(); drawStick(); drawCharacter(); drawParticles(); drawFloatingScores();
         }
         
-        function handleInteractionStart() {
-            if (gameState === 'waiting') {
-                gameState = 'growing';
-            } else if (gameState === 'over' || gameState === 'story_win') {
-                showMenu();
-            }
-        }
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
         
-        function handleInteractionEnd() {
-            if (gameState === 'growing') {
-                gameState = 'falling';
-            }
-        }
-
+        function handleInteractionStart() { if (gameState === 'waiting') gameState = 'growing'; }
+        function handleInteractionEnd() { if (gameState === 'growing') gameState = 'falling'; }
+        
+        infoOverlay.addEventListener('click', (e) => { if (gameState === 'over' || gameState === 'story_win') showMenu(); });
         canvas.addEventListener('mousedown', handleInteractionStart);
         canvas.addEventListener('mouseup', handleInteractionEnd);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInteractionStart(); }, { passive: false });
-        canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleInteractionEnd(); });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInteractionStart(e); }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleInteractionEnd(e); });
+        window.addEventListener('resize', () => { if(gameState !== 'menu' && gameState !== 'over' && gameState !== 'story_win') init(); else if(gameState === 'menu') resizeCanvas(); });
         
-        infoOverlay.addEventListener('click', () => {
-             if (gameState === 'over' || gameState === 'story_win' || gameState === 'menu') {
-                handleInteractionStart();
-            }
-        });
-
-
-        window.addEventListener('resize', () => {
-            if(gameState !== 'menu') init();
-            else resizeCanvas();
-        });
-        
-        resizeCanvas();
-        showMenu();
-        gameLoop();
+        resizeCanvas(); showMenu(); gameLoop();
     </script>
 </body>
 </html>
+
+
 
 
