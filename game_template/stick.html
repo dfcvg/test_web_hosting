@@ -47,6 +47,7 @@
             background-color: rgba(0, 0, 0, 0.5);
             padding: 2rem 4rem; border-radius: 1rem;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            max-width: 90vw;
         }
         .text-container h1 { font-size: 3rem; font-weight: bold; margin-bottom: 0.5rem; }
         .text-container p { font-size: 1.2rem; margin-bottom: 1.5rem; }
@@ -67,6 +68,9 @@
         .stage-button.locked { background-color: #95a5a6; cursor: not-allowed; }
         .stage-button span:first-child { font-size: 1.5rem; font-weight: bold; }
         .stage-button span:last-child { font-size: 0.8rem; }
+        .explanation-list { text-align: left; margin-top: 1.5rem; font-size: 1rem; }
+        .explanation-list li { margin-bottom: 0.75rem; }
+        .explanation-list span { display: inline-block; width: 20px; height: 20px; margin-right: 10px; vertical-align: middle; border: 1px solid white;}
     </style>
 </head>
 <body class="bg-gray-800 m-0 p-0 overflow-hidden">
@@ -122,11 +126,48 @@
                     <h1>스틱 히어로</h1><p>플레이할 모드를 선택하세요</p>
                     <button id="storyModeBtn" class="menu-button">스토리 모드</button>
                     <button id="infiniteModeBtn" class="menu-button">무한 모드</button>
-                    <button id="testModeBtn" class="menu-button" style="background-color: #e67e22;">테스트 모드</button>
+                    <button id="testModeBtn" class="menu-button" style="background-color: #f39c12;">테스트 모드</button>
+                    <div style="margin-top: 1rem;">
+                        <button id="guideBtn" class="menu-button" style="background-color: #3498db;">가이드</button>
+                        <button id="explanationBtn" class="menu-button" style="background-color: #9b59b6;">요소 설명</button>
+                    </div>
                 </div>`;
             document.getElementById('storyModeBtn').addEventListener('click', () => { isTestMode = false; showDifficultySelection('story'); });
             document.getElementById('infiniteModeBtn').addEventListener('click', () => { isTestMode = false; showDifficultySelection('infinite'); });
             document.getElementById('testModeBtn').addEventListener('click', () => { isTestMode = true; showDifficultySelection('story'); });
+            document.getElementById('guideBtn').addEventListener('click', showGuide);
+            document.getElementById('explanationBtn').addEventListener('click', showExplanation);
+        }
+
+        function showGuide() {
+            infoOverlay.innerHTML = `
+                <div class="text-container">
+                    <h1>게임 방법</h1>
+                    <ul class="explanation-list">
+                        <li>- 화면을 길게 누르면 다리가 길어집니다.</li>
+                        <li>- 화면에서 손을 떼면 다리가 앞으로 넘어집니다.</li>
+                        <li>- 다리 길이가 다음 징검다리에 정확히 맞아야 건널 수 있습니다.</li>
+                        <li>- 너무 짧거나 길면 캐릭터가 아래로 떨어집니다.</li>
+                    </ul>
+                    <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem; background-color: #95a5a6;">뒤로가기</button>
+                </div>`;
+            document.getElementById('backToMenuBtn').addEventListener('click', showMenu);
+        }
+
+        function showExplanation() {
+            infoOverlay.innerHTML = `
+                <div class="text-container">
+                    <h1>요소 설명</h1>
+                    <ul class="explanation-list">
+                        <li><span style="background-color: #6D28D9;"></span>움직이는 발판: 좌우로 움직여 타이밍을 맞추기 어렵게 합니다.</li>
+                        <li><span style="background-color: #a2d2ff;"></span>얼음 발판: 착지 시 캐릭터가 미끄러져 가장자리를 넘으면 떨어집니다.</li>
+                        <li><span style="background-color: #2ecc71;"></span>트램펄린: 착지 시 점프하며 보너스 점수(+5)를 얻습니다.</li>
+                        <li><span style="background-color: #e67e22;"></span>부서지는 발판: 올라서면 3초 카운트다운 후 부서집니다.</li>
+                        <li><span style="background-color: #34495e;"></span>새 장애물: 다리를 놓는 중 부딪히면 다리가 즉시 넘어집니다.</li>
+                    </ul>
+                    <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem; background-color: #95a5a6;">뒤로가기</button>
+                </div>`;
+            document.getElementById('backToMenuBtn').addEventListener('click', showMenu);
         }
         
         function showDifficultySelection(mode) {
@@ -164,7 +205,7 @@
                     <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem;">뒤로가기</button>
                 </div>`;
             document.querySelectorAll('.stage-button:not(.locked)').forEach(btn => btn.addEventListener('click', () => startGame('story', parseInt(btn.dataset.stage))));
-            document.getElementById('backToMenuBtn').addEventListener('click', showMenu);
+            document.getElementById('backToMenuBtn').addEventListener('click', isTestMode ? () => showDifficultySelection('story') : showMenu);
         }
         
         function showGameOver() {
@@ -254,20 +295,15 @@
             platforms.forEach(p => { if(p.type === 'moving_x') { p.x += p.moveSpeed; if(Math.abs(p.x - p.startX) > p.moveRange) p.moveSpeed *= -1; } });
             if(gameState === 'growing') { 
                 stick.length += stickGrowSpeed; 
-                
-                // 새와 다리(stick)의 충돌 감지 로직 수정
                 obstacles.forEach(o => { 
                     const stickLeft = stick.x - stickWidth / 2;
                     const stickRight = stick.x + stickWidth / 2;
                     const stickTop = stick.y - stick.length;
                     const stickBottom = stick.y;
-
                     const birdLeft = o.x;
                     const birdRight = o.x + o.width;
                     const birdTop = o.y;
                     const birdBottom = o.y + o.height;
-
-                    // 두 사각형이 겹치는지 확인
                     if (stickRight > birdLeft && stickLeft < birdRight && stickBottom > birdTop && stickTop < birdBottom) {
                         gameState = 'falling';
                     }
@@ -310,5 +346,4 @@
     </script>
 </body>
 </html>
-
 
