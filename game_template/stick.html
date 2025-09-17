@@ -20,7 +20,7 @@
             align-items: center;
         }
         canvas {
-            background-color: #d0f4f7;
+            background: linear-gradient(#87CEEB, #D0F4F7); /* 하늘 배경 그라데이션 */
             display: block;
         }
         #info-overlay {
@@ -37,17 +37,34 @@
             transition: opacity 0.3s;
         }
         #info-overlay.interactive { pointer-events: auto; }
-        #score {
+        #game-ui-container {
             position: absolute;
-            top: 5vh; font-size: 5rem; font-weight: bold; color: white;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2vh 5vw;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+        #score {
+            font-size: 5rem; font-weight: bold; color: white;
             opacity: 0.5; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            user-select: none; display: none;
+            user-select: none; 
+        }
+        #coin-display {
+             font-size: 1.5rem; font-weight: bold; color: white;
+             background-color: rgba(0,0,0,0.3);
+             padding: 0.5rem 1rem;
+             border-radius: 999px;
+             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
         .text-container {
             background-color: rgba(0, 0, 0, 0.5);
             padding: 2rem 4rem; border-radius: 1rem;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            max-width: 90vw;
+            max-width: 90vw; max-height: 80vh; overflow-y: auto;
         }
         .text-container h1 { font-size: 3rem; font-weight: bold; margin-bottom: 0.5rem; }
         .text-container p { font-size: 1.2rem; margin-bottom: 1.5rem; }
@@ -63,28 +80,70 @@
             background-color: #3498db; width: 80px; height: 80px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             border-radius: 0.5rem; cursor: pointer; transition: transform 0.2s;
+            position: relative;
         }
         .stage-button:hover { transform: scale(1.05); }
         .stage-button.locked { background-color: #95a5a6; cursor: not-allowed; }
-        .stage-button span:first-child { font-size: 1.5rem; font-weight: bold; }
-        .stage-button span:last-child { font-size: 0.8rem; }
+        .stage-button .stage-number { font-size: 1.5rem; font-weight: bold; }
+        .stage-button .stage-stars { font-size: 1rem; color: #f1c40f; position: absolute; bottom: 5px; }
+        
         .explanation-list { text-align: left; margin-top: 1.5rem; font-size: 1rem; }
         .explanation-list li { margin-bottom: 0.75rem; }
         .explanation-list span { display: inline-block; width: 20px; height: 20px; margin-right: 10px; vertical-align: middle; border: 1px solid white;}
+
+        .character-select-container { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+        .character-button {
+            width: 80px; height: 80px; border: 4px solid transparent; border-radius: 0.5rem;
+            cursor: pointer; transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .character-button.selected { border-color: #f1c40f; transform: scale(1.1); }
+        .stars-container { font-size: 2.5rem; color: #bdc3c7; margin: 0.5rem 0 1rem 0; }
+        .stars-container .star.filled { color: #f1c40f; }
+
+        .achievement-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .achievement-item.unlocked { background-color: rgba(255,215,0,0.2); }
+        .achievement-info { text-align: left; }
+        .achievement-info h3 { font-weight: bold; }
+        .achievement-progress { font-size: 0.9rem; opacity: 0.8; }
+        .achievement-reward button {
+            padding: 0.5rem 1rem; font-size: 1rem; background-color: #f1c40f; color: black;
+            border-radius: 0.25rem; border: none; cursor: pointer;
+        }
+        .achievement-reward button:disabled { background-color: #7f8c8d; cursor: not-allowed; }
+        
+        #achievement-popup {
+            position: absolute; top: 10vh; left: 50%; transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.7); padding: 1rem 2rem; border-radius: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            opacity: 0; transition: opacity 0.5s, top 0.5s;
+            pointer-events: none;
+        }
+        #achievement-popup.show { top: 15vh; opacity: 1; }
     </style>
 </head>
 <body class="bg-gray-800 m-0 p-0 overflow-hidden">
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
-        <div id="score">0</div>
+        <div id="game-ui-container">
+            <div id="score" class="text-6xl md:text-8xl">0</div>
+            <div id="coin-display">💰 0</div>
+        </div>
         <div id="info-overlay" class="interactive"></div>
+        <div id="achievement-popup"></div>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score');
+        const coinDisplay = document.getElementById('coin-display');
         const infoOverlay = document.getElementById('info-overlay');
+        const achievementPopup = document.getElementById('achievement-popup');
         
         const PRNG = {
             seed: 0,
@@ -94,60 +153,217 @@
         };
 
         const difficultySettings = {
-            easy: { platformWidthMultiplier: 1.2, moveSpeedMultiplier: 0.7, birdSpeedMultiplier: 0.8, specialPlatformChance: 0.3, breakingTime: 240 },
-            normal: { platformWidthMultiplier: 1.0, moveSpeedMultiplier: 1.0, birdSpeedMultiplier: 1.0, specialPlatformChance: 0.4, breakingTime: 180 },
-            hard: { platformWidthMultiplier: 0.8, moveSpeedMultiplier: 1.3, birdSpeedMultiplier: 1.2, specialPlatformChance: 0.55, breakingTime: 120 }
+            easy: { platformWidthMultiplier: 1.2, moveSpeedMultiplier: 0.7, birdSpeedMultiplier: 0.8, specialPlatformChance: 0.3, breakingTime: 240, perfectWidth: 12 },
+            normal: { platformWidthMultiplier: 1.0, moveSpeedMultiplier: 1.0, birdSpeedMultiplier: 1.0, specialPlatformChance: 0.4, breakingTime: 180, perfectWidth: 8 },
+            hard: { platformWidthMultiplier: 0.8, moveSpeedMultiplier: 1.3, birdSpeedMultiplier: 1.2, specialPlatformChance: 0.55, breakingTime: 120, perfectWidth: 5 }
         };
         let currentDifficulty = difficultySettings.normal;
 
+        const characters = [
+            { id: 'red', name: '기본', color: '#d63031' }, { id: 'blue', name: '파랑', color: '#3498db' },
+            { id: 'green', name: '초록', color: '#2ecc71' }, { id: 'ninja', name: '닌자', color: '#34495e' },
+            { id: 'robot', name: '로봇', color: '#95a5a6' }, { id: 'kitty', name: '고양이', color: '#e58e26' }
+        ];
+        let selectedCharacter = characters[0];
+
+        const achievements = {
+            'beginner': { name: '첫 걸음', description: '징검다리 10개 건너기', goal: 10, reward: 50, stat: 'totalPlatforms' },
+            'adept': { name: '숙련된 탐험가', description: '징검다리 50개 건너기', goal: 50, reward: 100, stat: 'totalPlatforms' },
+            'perfect10': { name: '완벽주의자', description: '퍼펙트 랜딩 10번 달성', goal: 10, reward: 75, stat: 'totalPerfects' },
+            'highScore50': { name: '고득점자', description: '무한 모드 50점 달성', goal: 50, reward: 150, stat: 'highScore' },
+            'iceDancer': { name: '얼음 위의 댄서', description: '얼음 발판 연속 5번 건너기', goal: 5, reward: 100, stat: 'consecutiveIce' },
+            'stageMaster': { name: '스테이지 마스터', description: '별 15개 획득', goal: 15, reward: 200, stat: 'totalStars' }
+        };
+        let achievementPopupQueue = [];
+
         let devicePixelRatio = window.devicePixelRatio || 1;
         let score = 0, platforms = [], stick = {}, stickman = {}, particles = [], floatingScores = [], obstacles = [];
+        let backgroundLayers = { mountains: [], hills: [], clouds: [] };
         let gameState = 'menu';
         let gameMode = 'infinite', storyProgress = 0, currentStage = 0;
-        let unlockedStages = 1;
+        
+        let unlockedStages, stageStars, playerCoins, playerStats;
         let isTestMode = false;
         
         const storyStages = [
-            { goal: 5, features: [] }, { goal: 7, features: ['moving'] }, { goal: 8, features: ['moving', 'ice'] }, { goal: 10, features: ['moving', 'ice', 'trampoline'] },
-            { goal: 12, features: ['moving', 'ice', 'trampoline', 'breaking'] }, { goal: 15, features: ['moving', 'ice', 'trampoline', 'breaking', 'bird'] },
-            { goal: 10, features: ['ice', 'breaking'] }, { goal: 12, features: ['moving', 'bird'] }, { goal: 14, features: ['trampoline', 'breaking', 'moving'] },
-            { goal: 16, features: ['ice', 'bird', 'breaking'] }, { goal: 18, features: ['moving', 'ice', 'trampoline', 'bird'] }, { goal: 20, features: ['moving', 'ice', 'trampoline', 'breaking', 'bird'] }
+            { goal: 5, features: [], stars: [6, 8, 12] }, { goal: 7, features: ['moving'], stars: [8, 11, 15] }, 
+            { goal: 8, features: ['moving', 'ice'], stars: [10, 14, 19] }, { goal: 10, features: ['moving', 'ice', 'trampoline'], stars: [12, 17, 23] },
+            { goal: 12, features: ['moving', 'ice', 'trampoline', 'breaking'], stars: [15, 20, 27] }, { goal: 15, features: ['moving', 'ice', 'trampoline', 'breaking', 'bird'], stars: [18, 24, 32] },
+            { goal: 10, features: ['ice', 'breaking'], stars: [13, 18, 25] }, { goal: 12, features: ['moving', 'bird'], stars: [15, 20, 28] }, 
+            { goal: 14, features: ['trampoline', 'breaking', 'moving'], stars: [17, 23, 31] }, { goal: 16, features: ['ice', 'bird', 'breaking'], stars: [20, 27, 36] }, 
+            { goal: 18, features: ['moving', 'ice', 'trampoline', 'bird'], stars: [22, 30, 40] }, { goal: 20, features: ['moving', 'ice', 'trampoline', 'breaking', 'bird'], stars: [25, 34, 45] }
         ];
         
         let characterStartX;
         const platformHeight = 200, stickWidth = 5, stickGrowSpeed = 4, stickFallSpeed = 0.1, stickmanWalkSpeed = 2.5, worldShiftSpeed = 3;
+        
+        function saveData() {
+            localStorage.setItem('stickHeroUnlocked', unlockedStages);
+            localStorage.setItem('stickHeroStars', JSON.stringify(stageStars));
+            localStorage.setItem('stickHeroCoins', playerCoins);
+            localStorage.setItem('stickHeroStats', JSON.stringify(playerStats));
+        }
+
+        function loadData() {
+            unlockedStages = parseInt(localStorage.getItem('stickHeroUnlocked')) || 1;
+            stageStars = JSON.parse(localStorage.getItem('stickHeroStars')) || {};
+            playerCoins = parseInt(localStorage.getItem('stickHeroCoins')) || 0;
+            playerStats = JSON.parse(localStorage.getItem('stickHeroStats')) || {
+                totalPlatforms: 0, totalPerfects: 0, highScore: 0,
+                consecutiveIce: 0, totalStars: 0,
+                unlockedAchievements: {}, claimedAchievements: {}
+            };
+            updateCoinDisplay();
+        }
+
+        function updateCoinDisplay() { coinDisplay.textContent = `💰 ${playerCoins}`; }
 
         function showMenu() {
             gameState = 'menu';
             infoOverlay.classList.add('interactive');
             scoreDisplay.style.display = 'none';
+            coinDisplay.style.display = 'block';
             infoOverlay.innerHTML = `
                 <div class="text-container">
                     <h1>스틱 히어로</h1><p>플레이할 모드를 선택하세요</p>
-                    <button id="storyModeBtn" class="menu-button">스토리 모드</button>
-                    <button id="infiniteModeBtn" class="menu-button">무한 모드</button>
-                    <button id="testModeBtn" class="menu-button" style="background-color: #f39c12;">테스트 모드</button>
-                    <div style="margin-top: 1rem;">
-                        <button id="guideBtn" class="menu-button" style="background-color: #3498db;">가이드</button>
-                        <button id="explanationBtn" class="menu-button" style="background-color: #9b59b6;">요소 설명</button>
+                    <div>
+                        <button id="storyModeBtn" class="menu-button">스토리 모드</button>
+                        <button id="infiniteModeBtn" class="menu-button">무한 모드</button>
+                    </div>
+                    <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 1rem; display: flex; justify-content: center; flex-wrap: wrap;">
+                        <button id="characterBtn" class="menu-button" style="background-color: #1abc9c; padding: 0.75rem 1.5rem; font-size: 1rem;">캐릭터</button>
+                        <button id="achievementBtn" class="menu-button" style="background-color: #f1c40f; padding: 0.75rem 1.5rem; font-size: 1rem;">업적</button>
+                        <button id="guideBtn" class="menu-button" style="background-color: #3498db; padding: 0.75rem 1.5rem; font-size: 1rem;">가이드</button>
+                        <button id="explanationBtn" class="menu-button" style="background-color: #9b59b6; padding: 0.75rem 1.5rem; font-size: 1rem;">요소 설명</button>
+                        <button id="testModeBtn" class="menu-button" style="background-color: #e67e22; padding: 0.75rem 1.5rem; font-size: 1rem;">테스트 모드</button>
                     </div>
                 </div>`;
             document.getElementById('storyModeBtn').addEventListener('click', () => { isTestMode = false; showDifficultySelection('story'); });
             document.getElementById('infiniteModeBtn').addEventListener('click', () => { isTestMode = false; showDifficultySelection('infinite'); });
+            document.getElementById('characterBtn').addEventListener('click', showCharacterSelection);
+            document.getElementById('achievementBtn').addEventListener('click', showAchievements);
             document.getElementById('testModeBtn').addEventListener('click', () => { isTestMode = true; showDifficultySelection('story'); });
             document.getElementById('guideBtn').addEventListener('click', showGuide);
             document.getElementById('explanationBtn').addEventListener('click', showExplanation);
         }
 
-        function showGuide() {
+        function showAchievements() {
+            let achievementsHTML = '';
+            for (const id in achievements) {
+                const ach = achievements[id];
+                const isUnlocked = playerStats.unlockedAchievements[id];
+                const isClaimed = playerStats.claimedAchievements[id];
+                const currentProgress = playerStats[ach.stat] || 0;
+
+                achievementsHTML += `
+                    <div class="achievement-item ${isUnlocked ? 'unlocked' : ''}">
+                        <div class="achievement-info">
+                            <h3>${ach.name}</h3>
+                            <p class="achievement-progress">${ach.description} (${Math.min(currentProgress, ach.goal)}/${ach.goal})</p>
+                        </div>
+                        <div class="achievement-reward">
+                            <button data-achid="${id}" ${!isUnlocked || isClaimed ? 'disabled' : ''}>
+                                ${isClaimed ? '완료' : `💰 ${ach.reward}`}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
             infoOverlay.innerHTML = `
+                <div class="text-container">
+                    <h1>업적</h1>
+                    ${achievementsHTML}
+                    <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem;">뒤로가기</button>
+                </div>`;
+
+            document.querySelectorAll('.achievement-reward button').forEach(btn => {
+                btn.addEventListener('click', () => claimAchievement(btn.dataset.achid));
+            });
+            document.getElementById('backToMenuBtn').addEventListener('click', showMenu);
+        }
+
+        function claimAchievement(id) {
+            if (!playerStats.unlockedAchievements[id] || playerStats.claimedAchievements[id]) return;
+            
+            const ach = achievements[id];
+            playerCoins += ach.reward;
+            playerStats.claimedAchievements[id] = true;
+            saveData();
+            updateCoinDisplay();
+            showAchievements(); // Refresh the list
+        }
+
+        function checkAchievements() {
+            let newAchievementUnlocked = false;
+            playerStats.totalStars = Object.values(stageStars).reduce((a, b) => a + b, 0);
+            
+            for (const id in achievements) {
+                if (playerStats.unlockedAchievements[id]) continue;
+
+                const ach = achievements[id];
+                const currentProgress = playerStats[ach.stat] || 0;
+
+                if (currentProgress >= ach.goal) {
+                    playerStats.unlockedAchievements[id] = true;
+                    achievementPopupQueue.push(ach);
+                    newAchievementUnlocked = true;
+                }
+            }
+            if(newAchievementUnlocked) saveData();
+        }
+
+        function showAchievementPopup() {
+            if (achievementPopupQueue.length === 0 || gameState === 'menu') return;
+            const ach = achievementPopupQueue.shift();
+            
+            achievementPopup.innerHTML = `<h3>업적 달성!</h3><p>${ach.name}</p>`;
+            achievementPopup.classList.add('show');
+
+            setTimeout(() => {
+                achievementPopup.classList.remove('show');
+            }, 3000);
+        }
+
+        function showCharacterSelection() {
+            let characterButtonsHTML = '';
+            characters.forEach(char => {
+                characterButtonsHTML += `<div class="character-button ${selectedCharacter.id === char.id ? 'selected' : ''}" data-charid="${char.id}"><canvas width="60" height="60" data-canvas-char="${char.id}"></canvas></div>`;
+            });
+
+            infoOverlay.innerHTML = `
+                 <div class="text-container">
+                    <h1>캐릭터 선택</h1>
+                    <div class="character-select-container">${characterButtonsHTML}</div>
+                    <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem; background-color: #95a5a6;">뒤로가기</button>
+                </div>`;
+            
+            document.querySelectorAll('canvas[data-canvas-char]').forEach(canvasEl => {
+                const charId = canvasEl.dataset.canvasChar;
+                const char = characters.find(c => c.id === charId);
+                const tempCtx = canvasEl.getContext('2d');
+                drawCharacter(tempCtx, { x: 30, y: 55 }, char);
+            });
+            
+            document.querySelectorAll('.character-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const charId = e.currentTarget.dataset.charid;
+                    selectedCharacter = characters.find(c => c.id === charId);
+                    document.querySelector('.character-button.selected')?.classList.remove('selected');
+                    e.currentTarget.classList.add('selected');
+                });
+            });
+            document.getElementById('backToMenuBtn').addEventListener('click', showMenu);
+        }
+
+        function showGuide() {
+             infoOverlay.innerHTML = `
                 <div class="text-container">
                     <h1>게임 방법</h1>
                     <ul class="explanation-list">
                         <li>- 화면을 길게 누르면 다리가 길어집니다.</li>
                         <li>- 화면에서 손을 떼면 다리가 앞으로 넘어집니다.</li>
                         <li>- 다리 길이가 다음 징검다리에 정확히 맞아야 건널 수 있습니다.</li>
-                        <li>- 너무 짧거나 길면 캐릭터가 아래로 떨어집니다.</li>
+                        <li>- 징검다리 중앙의 <span style="background-color: #f1c40f;"></span>'퍼펙트 존'에 맞추면 보너스 점수를 얻습니다!</li>
                     </ul>
                     <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem; background-color: #95a5a6;">뒤로가기</button>
                 </div>`;
@@ -196,7 +412,17 @@
             let stageButtonsHTML = '';
             for (let i = 0; i < storyStages.length; i++) {
                 const isLocked = !isTestMode && (i + 1 > unlockedStages);
-                stageButtonsHTML += `<div class="stage-button ${isLocked ? 'locked' : ''}" data-stage="${i}"><span>${i + 1}</span><span>${isLocked ? 'Locked' : 'Go!'}</span></div>`;
+                const stars = stageStars[i] || 0;
+                let starsHTML = '';
+                for(let s = 0; s < 3; s++) {
+                    starsHTML += s < stars ? '★' : '☆';
+                }
+
+                stageButtonsHTML += `
+                    <div class="stage-button ${isLocked ? 'locked' : ''}" data-stage="${i}">
+                        <span class="stage-number">${i + 1}</span>
+                        <span class="stage-stars">${isLocked ? '' : starsHTML}</span>
+                    </div>`;
             }
             infoOverlay.innerHTML = `
                 <div class="text-container">
@@ -205,43 +431,67 @@
                     <button id="backToMenuBtn" class="menu-button" style="margin-top: 1rem;">뒤로가기</button>
                 </div>`;
             document.querySelectorAll('.stage-button:not(.locked)').forEach(btn => btn.addEventListener('click', () => startGame('story', parseInt(btn.dataset.stage))));
-            document.getElementById('backToMenuBtn').addEventListener('click', () => showDifficultySelection('story'));
+            document.getElementById('backToMenuBtn').addEventListener('click', isTestMode ? () => showDifficultySelection('story') : showMenu);
         }
         
         function showGameOver() {
-             gameState = 'over'; infoOverlay.classList.add('interactive');
+             gameState = 'over';
+             infoOverlay.classList.add('interactive');
+             if(gameMode === 'infinite' && score > playerStats.highScore) {
+                 playerStats.highScore = score;
+             }
+             playerStats.consecutiveIce = 0; // 연속 기록 초기화
+             checkAchievements();
+             saveData();
              infoOverlay.innerHTML = `<div class="text-container"><h1>게임 오버</h1><p>점수: ${score}<br>메뉴로 돌아가려면 터치하세요</p></div>`;
         }
+
         function showWinScreen() {
              gameState = 'story_win';
              infoOverlay.classList.add('interactive');
              
+             const stageData = storyStages[currentStage];
+             let starsEarned = 0;
+             if (storyProgress >= stageData.goal) {
+                starsEarned = 1;
+                if (score >= stageData.stars[0]) starsEarned = 2;
+                if (score >= stageData.stars[1]) starsEarned = 3;
+             }
+             const oldStars = stageStars[currentStage] || 0;
+             if(starsEarned > oldStars) {
+                 stageStars[currentStage] = starsEarned;
+             }
+             if (starsEarned > 0 && currentStage + 1 < storyStages.length) {
+                 unlockedStages = Math.max(unlockedStages, currentStage + 2);
+             }
+             
+             checkAchievements();
+             saveData();
+
+             let starsHTML = '';
+             for(let i=0; i<3; i++) {
+                 starsHTML += `<span class="star ${i < starsEarned ? 'filled' : ''}">★</span>`;
+             }
              let buttonsHTML = '';
              const isLastStage = currentStage >= storyStages.length - 1;
-
-             if (!isLastStage) {
+             if (!isLastStage && starsEarned > 0) {
                  buttonsHTML += `<button id="nextStageBtn" class="menu-button">다음 스테이지</button>`;
-             } else {
+             } else if (isLastStage && starsEarned > 0) {
                  buttonsHTML += `<p>모든 스테이지를 클리어했습니다!</p>`;
              }
              buttonsHTML += `<button id="stageSelectBtn" class="menu-button" style="background-color: #95a5a6;">스테이지 선택</button>`;
-
              infoOverlay.innerHTML = `
                  <div class="text-container">
-                    <h1>스테이지 클리어!</h1>
-                    <p>축하합니다!</p>
-                    <div style="margin-top: 1rem;">
-                        ${buttonsHTML}
-                    </div>
+                    <h1>스테이지 클리어!</h1><p>획득 점수: ${score}</p>
+                    <div class="stars-container">${starsHTML}</div>
+                    <div style="margin-top: 1rem;">${buttonsHTML}</div>
                 </div>`;
-            
-            if (!isLastStage) {
-                document.getElementById('nextStageBtn').addEventListener('click', () => {
-                    startGame('story', currentStage + 1);
-                });
+            if (!isLastStage && starsEarned > 0) {
+                document.getElementById('nextStageBtn').addEventListener('click', () => startGame('story', currentStage + 1));
             }
             document.getElementById('stageSelectBtn').addEventListener('click', showStageSelection);
         }
+
         function startGame(mode, stage = 0) {
             gameMode = mode; currentStage = stage;
             if (gameMode === 'story') PRNG.setSeed(stage + 1); else PRNG.setSeed(12345);
@@ -252,8 +502,9 @@
             canvas.style.width = `${window.innerWidth}px`; canvas.style.height = `${window.innerHeight}px`; ctx.scale(devicePixelRatio, devicePixelRatio);
         }
         function init() {
-            resizeCanvas(); score = 0; storyProgress = 0; scoreDisplay.textContent = score; scoreDisplay.style.display = 'block';
+            resizeCanvas(); score = 0; storyProgress = 0; scoreDisplay.textContent = score; scoreDisplay.style.display = 'block'; coinDisplay.style.display = 'none';
             platforms = []; particles = []; floatingScores = []; obstacles = [];
+            initBackground();
             const initialPlatformWidth = 150; characterStartX = initialPlatformWidth - 50;
             platforms.push({ x: 0, width: initialPlatformWidth, isStartPlatform: true, type: 'normal' });
             if (gameMode === 'story') { for(let i = 0; i < storyStages[currentStage].goal; i++) addPlatform(i); if(platforms.length > 1) platforms[platforms.length-1].isGoal = true;
@@ -262,6 +513,25 @@
             gameState = 'waiting'; infoOverlay.classList.remove('interactive'); infoOverlay.innerHTML = ''; draw();
         }
         function resetStick() { const p = platforms[0]; stick = { x: p.x + p.width, y: canvas.height / devicePixelRatio - platformHeight, length: 0, rotation: 0 }; }
+        
+        function initBackground() {
+            backgroundLayers.mountains = [];
+            backgroundLayers.hills = [];
+            backgroundLayers.clouds = [];
+            const screenWidth = canvas.width / devicePixelRatio;
+            const screenHeight = canvas.height / devicePixelRatio;
+            for (let i = 0; i < 2; i++) {
+                backgroundLayers.mountains.push({ x: i * screenWidth, y: screenHeight - platformHeight - 100, width: screenWidth, height: 100, parallax: 0.2 });
+                backgroundLayers.hills.push({ x: i * screenWidth, y: screenHeight - platformHeight - 50, width: screenWidth, height: 50, parallax: 0.5 });
+            }
+            for (let i = 0; i < 5; i++) {
+                backgroundLayers.clouds.push({
+                    x: Math.random() * screenWidth, y: Math.random() * 150 + 20,
+                    radius: Math.random() * 20 + 15, speed: Math.random() * 0.2 + 0.1, parallax: 0.8
+                });
+            }
+        }
+
         function addPlatform(levelIndex = -1) {
             const lastPlatform = platforms[platforms.length - 1];
             const gameScreenWidth = canvas.width / devicePixelRatio; const availableWidth = gameScreenWidth - (characterStartX || 100); const maxDynamicGap = availableWidth - 80;
@@ -270,7 +540,8 @@
             const width = (PRNG.random() * 80 + 40) * currentDifficulty.platformWidthMultiplier;
             const x = lastPlatform.x + lastPlatform.width + gap;
             
-            const newPlatform = { x, width, type: 'normal' };
+            const perfectWidth = currentDifficulty.perfectWidth;
+            const newPlatform = { x, width, type: 'normal', perfectWidth, perfectX: x + (width/2) - (perfectWidth/2) };
             const features = gameMode === 'story' ? storyStages[currentStage].features : ['moving', 'ice', 'trampoline', 'breaking', 'bird'];
             const difficulty = gameMode === 'story' ? levelIndex : score;
 
@@ -291,6 +562,42 @@
             const y = canvas.height / devicePixelRatio - platformHeight - (PRNG.random() * 150 + 50); const x = canvas.width / devicePixelRatio + 30;
             obstacles.push({ x, y, vx: -(PRNG.random() * 1 + 1) * currentDifficulty.birdSpeedMultiplier, width: 30, height: 20 });
         }
+        
+        function drawBackground() {
+            const screenWidth = canvas.width / devicePixelRatio;
+            const screenHeight = canvas.height / devicePixelRatio;
+            
+            ctx.fillStyle = '#78b0e0';
+            backgroundLayers.mountains.forEach(m => {
+                ctx.beginPath();
+                ctx.moveTo(m.x, m.y);
+                ctx.lineTo(m.x + m.width / 2, m.y - m.height);
+                ctx.lineTo(m.x + m.width, m.y);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            ctx.fillStyle = '#27ae60';
+            backgroundLayers.hills.forEach(h => {
+                ctx.beginPath();
+                ctx.moveTo(h.x, h.y + h.height);
+                ctx.quadraticCurveTo(h.x + h.width / 2, h.y - h.height, h.x + h.width, h.y + h.height);
+                ctx.lineTo(h.x + h.width, screenHeight);
+                ctx.lineTo(h.x, screenHeight);
+                ctx.closePath();
+                ctx.fill();
+            });
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            backgroundLayers.clouds.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.arc(c.x + c.radius * 0.8, c.y, c.radius * 0.8, 0, Math.PI * 2);
+                ctx.arc(c.x - c.radius * 0.8, c.y, c.radius * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
         function drawPlatforms() {
             platforms.forEach(p => {
                 const platformY = canvas.height/devicePixelRatio - platformHeight;
@@ -298,6 +605,13 @@
                 if(p.type === 'moving_x') ctx.fillStyle = '#6D28D9'; else if (p.type === 'ice') ctx.fillStyle = '#a2d2ff';
                 else if (p.type === 'trampoline') ctx.fillStyle = '#2ecc71'; else if (p.type === 'breaking') ctx.fillStyle = `rgba(230, 126, 34, ${p.breakTimer/currentDifficulty.breakingTime})`;
                 ctx.fillRect(p.x, platformY, p.width, platformHeight);
+
+                // Draw Perfect Zone
+                if (!p.isStartPlatform) {
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.fillRect(p.perfectX, platformY, p.perfectWidth, 5);
+                }
+
                 if(p.type === 'breaking' && p.breakTimer < currentDifficulty.breakingTime) {
                     ctx.strokeStyle = `rgba(0,0,0,${1 - p.breakTimer/currentDifficulty.breakingTime})`; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(p.x+5, platformY+5); ctx.lineTo(p.x+p.width-5, platformY+15); ctx.stroke();
                     const secondsLeft=Math.ceil(p.breakTimer/60); ctx.fillStyle='white'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center'; ctx.fillText(secondsLeft, p.x+p.width/2, platformY+40);
@@ -308,31 +622,104 @@
         }
         function drawObstacles() { obstacles.forEach(o => { ctx.save(); ctx.translate(o.x, o.y); ctx.fillStyle='#34495e'; ctx.beginPath(); const flap=Math.sin(Date.now()/100)*10; ctx.moveTo(0,o.height/2); ctx.quadraticCurveTo(o.width/2, o.height/2-o.height+flap, o.width, o.height/2); ctx.quadraticCurveTo(o.width/2, o.height/2+o.height+flap, 0, o.height/2); ctx.fill(); ctx.restore(); }); }
         function drawStick() { if(!stick.length) return; ctx.save(); ctx.strokeStyle='#63473b'; ctx.lineWidth=stickWidth; ctx.translate(stick.x, stick.y); ctx.rotate(stick.rotation); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-stick.length); ctx.stroke(); ctx.restore(); }
-        function drawCharacter() { ctx.save(); ctx.translate(stickman.x, stickman.y); if(gameState==='bouncing')ctx.rotate(Math.sin(stickman.vy*0.5)*0.3); if(gameState==='story_win'&&Math.floor(Date.now()/200)%2===0)ctx.translate(0,-10); const bodyColor='#d63031'; ctx.fillStyle=bodyColor; ctx.beginPath(); ctx.arc(0,-20,15,Math.PI,0); ctx.fillRect(-15,-20,30,15); ctx.fill(); ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(-6,-22,4,0,Math.PI*2); ctx.arc(6,-22,4,0,Math.PI*2); ctx.fill(); ctx.fillStyle='black'; ctx.beginPath(); ctx.arc(-5,-22,2,0,Math.PI*2); ctx.arc(7,-22,2,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#333'; ctx.lineWidth=5; ctx.lineCap='round'; const isWalking=gameState==='walking'||gameState==='sliding'||gameState==='walking_to_fall'; const legY=-5; if(isWalking) { if(stickman.animFrame===0) { ctx.beginPath(); ctx.moveTo(-7,legY); ctx.lineTo(-12,legY+10); ctx.stroke(); ctx.beginPath(); ctx.moveTo(7,legY); ctx.lineTo(2,legY+10); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(-7,legY); ctx.lineTo(-2,legY+10); ctx.stroke(); ctx.beginPath(); ctx.moveTo(7,legY); ctx.lineTo(12,legY+10); ctx.stroke(); } } else { ctx.beginPath(); ctx.moveTo(-7,legY); ctx.lineTo(-7,legY+10); ctx.stroke(); ctx.beginPath(); ctx.moveTo(7,legY); ctx.lineTo(7,legY+10); ctx.stroke(); } ctx.restore(); }
+        
+        function drawCharacter(targetCtx = ctx, pos = stickman, char = selectedCharacter, state = gameState) {
+            targetCtx.save();
+            targetCtx.translate(pos.x, pos.y);
+            if(state==='bouncing') targetCtx.rotate(Math.sin(stickman.vy*0.5)*0.3);
+            if(state==='story_win'&&Math.floor(Date.now()/200)%2===0) targetCtx.translate(0,-10);
+
+            const bodyColor = char.color;
+            targetCtx.fillStyle = bodyColor;
+            
+            // Body & Head
+            if (char.id === 'robot') {
+                targetCtx.fillRect(-15, -35, 30, 30); // Head
+                targetCtx.fillRect(-12, -5, 24, 15); // Body
+                targetCtx.strokeStyle = '#333'; targetCtx.lineWidth = 2; targetCtx.beginPath(); targetCtx.moveTo(0, -35); targetCtx.lineTo(0, -42); targetCtx.stroke();
+                targetCtx.fillStyle = '#e74c3c'; targetCtx.beginPath(); targetCtx.arc(0, -44, 2, 0, Math.PI * 2); targetCtx.fill();
+            } else {
+                targetCtx.beginPath(); targetCtx.arc(0, -20, 15, Math.PI, 0); targetCtx.fillRect(-15, -20, 30, 15); targetCtx.fill();
+            }
+
+            // Accessories
+            if (char.id === 'ninja') { targetCtx.fillStyle = '#e74c3c'; targetCtx.fillRect(-16, -28, 32, 8); }
+            else if (char.id === 'kitty') {
+                targetCtx.fillStyle = bodyColor; targetCtx.beginPath();
+                targetCtx.moveTo(-15, -30); targetCtx.lineTo(-10, -40); targetCtx.lineTo(-5, -30); targetCtx.fill();
+                targetCtx.beginPath(); targetCtx.moveTo(15, -30); targetCtx.lineTo(10, -40); targetCtx.lineTo(5, -30); targetCtx.fill();
+            }
+
+            // Eyes
+            if (char.id === 'robot') {
+                targetCtx.fillStyle = '#f1c40f'; targetCtx.fillRect(-8, -28, 5, 5); targetCtx.fillRect(3, -28, 5, 5);
+            } else {
+                targetCtx.fillStyle = 'white'; targetCtx.beginPath(); targetCtx.arc(-6, -22, 4, 0, Math.PI * 2); targetCtx.arc(6, -22, 4, 0, Math.PI * 2); targetCtx.fill();
+                targetCtx.fillStyle = 'black'; targetCtx.beginPath(); targetCtx.arc(-5, -22, 2, 0, Math.PI * 2); targetCtx.arc(7, -22, 2, 0, Math.PI * 2); targetCtx.fill();
+            }
+             // Whiskers
+            if (char.id === 'kitty') {
+                targetCtx.strokeStyle = '#333'; targetCtx.lineWidth = 1;
+                targetCtx.beginPath(); targetCtx.moveTo(-16, -18); targetCtx.lineTo(-22, -20); targetCtx.stroke();
+                targetCtx.beginPath(); targetCtx.moveTo(-16, -15); targetCtx.lineTo(-22, -15); targetCtx.stroke();
+                targetCtx.beginPath(); targetCtx.moveTo(16, -18); targetCtx.lineTo(22, -20); targetCtx.stroke();
+                targetCtx.beginPath(); targetCtx.moveTo(16, -15); targetCtx.lineTo(22, -15); targetCtx.stroke();
+            }
+
+            targetCtx.strokeStyle = '#333'; targetCtx.lineWidth = 5; targetCtx.lineCap = 'round';
+            const isWalking = state==='walking'||state==='sliding'||state==='walking_to_fall';
+            const legY = -5;
+            if(isWalking && stickman) { 
+                if(stickman.animFrame===0) { targetCtx.beginPath(); targetCtx.moveTo(-7,legY); targetCtx.lineTo(-12,legY+10); targetCtx.stroke(); targetCtx.beginPath(); targetCtx.moveTo(7,legY); targetCtx.lineTo(2,legY+10); targetCtx.stroke(); }
+                else { targetCtx.beginPath(); targetCtx.moveTo(-7,legY); targetCtx.lineTo(-2,legY+10); targetCtx.stroke(); targetCtx.beginPath(); targetCtx.moveTo(7,legY); targetCtx.lineTo(12,legY+10); targetCtx.stroke(); }
+            } else {
+                targetCtx.beginPath(); targetCtx.moveTo(-7,legY); targetCtx.lineTo(-7,legY+10); targetCtx.stroke();
+                targetCtx.beginPath(); targetCtx.moveTo(7,legY); targetCtx.lineTo(7,legY+10); targetCtx.stroke();
+            }
+            targetCtx.restore();
+        }
+
         function createWinConfetti() { for(let i=0; i<100; i++) particles.push({ x: Math.random() * (canvas.width/devicePixelRatio), y: -Math.random()*(canvas.height/devicePixelRatio), size: Math.random()*8+4, speedX: 0, speedY: Math.random()*3+2, life: 200, color: `hsl(${Math.random()*360}, 100%, 50%)` }); }
+        function createPerfectLandingParticles(x, y) { for(let i=0; i<30; i++) { const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 4 + 2; particles.push({ x, y, size: Math.random() * 3 + 2, speedX: Math.cos(angle) * speed, speedY: Math.sin(angle) * speed, life: 50, color: `hsl(${PRNG.random() * 60 + 30}, 100%, 70%)` }); } }
         function updateParticles() { for(let i=particles.length-1; i>=0; i--) { const p=particles[i]; p.x+=p.speedX; p.y+=p.speedY; p.life--; if(p.life<=0) particles.splice(i,1); } }
         function drawParticles() { particles.forEach(p => { ctx.fillStyle=p.color; ctx.globalAlpha=Math.max(0,p.life/60); ctx.fillRect(p.x,p.y,p.size,p.size); }); ctx.globalAlpha=1.0; }
         function updateFloatingScores() { for(let i=floatingScores.length-1; i>=0; i--) { const fs=floatingScores[i]; fs.y-=0.5; fs.life--; fs.opacity=fs.life/60; if(fs.life<=0) floatingScores.splice(i,1); } }
         function drawFloatingScores() { floatingScores.forEach(fs => { ctx.fillStyle=`rgba(255,255,255,${fs.opacity})`; ctx.font='bold 20px sans-serif'; ctx.textAlign='center'; ctx.fillText(fs.text,fs.x,fs.y); }); }
+        
+        function updateBackground(shiftAmount = 0) {
+            const screenWidth = canvas.width / devicePixelRatio;
+            backgroundLayers.mountains.forEach(m => {
+                m.x -= shiftAmount * m.parallax;
+                if (m.x + m.width < 0) m.x += 2 * screenWidth;
+            });
+            backgroundLayers.hills.forEach(h => {
+                h.x -= shiftAmount * h.parallax;
+                if (h.x + h.width < 0) h.x += 2 * screenWidth;
+            });
+            backgroundLayers.clouds.forEach(c => {
+                c.x -= (c.speed + shiftAmount * c.parallax);
+                if (c.x + c.radius * 2 < 0) {
+                    c.x = screenWidth + c.radius * 2;
+                    c.y = Math.random() * 150 + 20;
+                }
+            });
+        }
+        
         function update() {
+            if(achievementPopupQueue.length > 0) showAchievementPopup();
             updateParticles(); updateFloatingScores();
+            updateBackground();
             if(gameState === 'waiting') { platforms.forEach(p => { if(p.type==='breaking' && p.breakTimer < currentDifficulty.breakingTime) { p.breakTimer--; if(p.breakTimer <= 0) { p.width=0; if(platforms.indexOf(p)===0) gameState='falling_death'; } } }); }
             obstacles.forEach(o => { o.x += o.vx; }); obstacles = obstacles.filter(o => o.x > -o.width);
-            platforms.forEach(p => { if(p.type === 'moving_x') { p.x += p.moveSpeed; if(Math.abs(p.x - p.startX) > p.moveRange) p.moveSpeed *= -1; } });
+            platforms.forEach(p => { if(p.type === 'moving_x') { p.x += p.moveSpeed; p.perfectX += p.moveSpeed; if(Math.abs(p.x - p.startX) > p.moveRange) p.moveSpeed *= -1; } });
             if(gameState === 'growing') { 
                 stick.length += stickGrowSpeed; 
                 obstacles.forEach(o => { 
-                    const stickLeft = stick.x - stickWidth / 2;
-                    const stickRight = stick.x + stickWidth / 2;
-                    const stickTop = stick.y - stick.length;
-                    const stickBottom = stick.y;
-                    const birdLeft = o.x;
-                    const birdRight = o.x + o.width;
-                    const birdTop = o.y;
-                    const birdBottom = o.y + o.height;
-                    if (stickRight > birdLeft && stickLeft < birdRight && stickBottom > birdTop && stickTop < birdBottom) {
-                        gameState = 'falling';
-                    }
+                    const stickLeft = stick.x - stickWidth / 2; const stickRight = stick.x + stickWidth / 2;
+                    const stickTop = stick.y - stick.length; const stickBottom = stick.y;
+                    const birdLeft = o.x; const birdRight = o.x + o.width;
+                    const birdTop = o.y; const birdBottom = o.y + o.height;
+                    if (stickRight > birdLeft && stickLeft < birdRight && stickBottom > birdTop && stickTop < birdBottom) { gameState = 'falling'; }
                 });
             } else if (gameState === 'falling') { stick.rotation += stickFallSpeed; if (stick.rotation >= Math.PI / 2) { stick.rotation = Math.PI/2; checkLanding(); }
             } else if (gameState === 'walking') {
@@ -340,38 +727,75 @@
                 const targetX = stick.x+stick.length-15; if (stickman.x < targetX) stickman.x += stickmanWalkSpeed;
                 else {
                     stickman.x = targetX; const next = platforms[1];
-                    if(gameMode==='story'&&next&&next.isGoal) { if(currentStage+1<storyStages.length && unlockedStages<=currentStage+1) unlockedStages=currentStage+2; createWinConfetti(); showWinScreen(); }
-                    else if (next&&next.type==='trampoline') { 
-                        score+=5; 
-                        scoreDisplay.textContent=gameMode==='story'?`${storyProgress}/${storyStages[currentStage].goal}`:score; 
-                        floatingScores.push({x:next.x+next.width/2,y:canvas.height/devicePixelRatio-platformHeight,text:'Jump! +5',opacity:1,life:60}); 
-                        gameState='bouncing'; stickman.vy=-10; 
-                    }
+                    if(gameMode==='story'&&next&&next.isGoal) { createWinConfetti(); showWinScreen(); }
+                    else if (next&&next.type==='trampoline') { score+=5; scoreDisplay.textContent=score; floatingScores.push({x:next.x+next.width/2,y:canvas.height/devicePixelRatio-platformHeight,text:'Jump! +5',opacity:1,life:60}); gameState='bouncing'; stickman.vy=-10; }
                     else if (next&&next.type==='ice') { gameState='sliding'; stickman.slideX=stickman.x+(next.width*0.5)+(PRNG.random()*30); } else { gameState='transitioning'; }
                 }
             } else if (gameState === 'sliding') { const p = platforms[1]; if (!p) { gameState='transitioning'; return; } const edge=p.x+p.width; if(stickman.x<stickman.slideX) { stickman.x+=stickmanWalkSpeed*0.8; if(stickman.x>edge) gameState='falling_death'; } else { stickman.slideX=0; gameState='transitioning'; }
             } else if (gameState === 'bouncing') { stickman.y+=stickman.vy; stickman.vy+=0.5; if(stickman.y>=canvas.height/devicePixelRatio-platformHeight) { stickman.y=canvas.height/devicePixelRatio-platformHeight; gameState='transitioning'; }
             } else if (gameState === 'transitioning') {
                 const target = platforms[1]; if(!target) return; const shift = target.x-characterStartX;
-                if(shift>0) { const amount=Math.min(worldShiftSpeed,shift); platforms.forEach(p=>{p.x-=amount; if(p.type==='moving_x') p.startX-=amount;}); stickman.x-=amount; stick.x-=amount; obstacles.forEach(o=>o.x-=amount); }
+                if(shift>0) { 
+                    const amount=Math.min(worldShiftSpeed,shift); 
+                    updateBackground(amount); 
+                    platforms.forEach(p=>{p.x-=amount; p.perfectX -= amount; if(p.type==='moving_x') { p.startX-=amount; }}); 
+                    stickman.x-=amount; stick.x-=amount; 
+                    obstacles.forEach(o=>o.x-=amount); 
+                }
                 else { platforms.shift(); if(gameMode === 'infinite') addPlatform(score); resetStick(); gameState = 'waiting'; }
             } else if (gameState === 'walking_to_fall') { if (stickman.x < stick.x + stick.length) stickman.x += stickmanWalkSpeed; else gameState = 'falling_death';
             } else if (gameState === 'falling_death') { stickman.y += 8; if(stickman.y > canvas.height/devicePixelRatio + 50) showGameOver(); }
         }
-        function checkLanding() { const p = platforms[1]; if (!p) { gameState = 'walking_to_fall'; return; } const stickEnd = stick.x + stick.length; if (stickEnd >= p.x && stickEnd <= p.x + p.width) { if (p.type === 'moving_x') p.moveSpeed = 0; if (p.type === 'breaking') p.breakTimer--; gameState = 'walking'; storyProgress++; score++; scoreDisplay.textContent = gameMode === 'story' ? `${storyProgress}/${storyStages[currentStage].goal}` : score; } else { gameState = 'walking_to_fall'; } }
-        function draw() { ctx.clearRect(0, 0, canvas.width / devicePixelRatio, canvas.height / devicePixelRatio); drawPlatforms(); drawObstacles(); drawStick(); drawCharacter(); drawParticles(); drawFloatingScores(); }
+        function checkLanding() { 
+            const p = platforms[1]; if (!p) { gameState = 'walking_to_fall'; return; } 
+            const stickEnd = stick.x + stick.length; 
+            if (stickEnd >= p.x && stickEnd <= p.x + p.width) { 
+                if (p.type === 'moving_x') p.moveSpeed = 0; 
+                if (p.type === 'breaking') p.breakTimer--; 
+                
+                playerStats.totalPlatforms++;
+                if (p.type === 'ice') playerStats.consecutiveIce++; else playerStats.consecutiveIce = 0;
+                
+                let baseScore = 1; let bonus = 0;
+                const perfectStart = p.perfectX;
+                const perfectEnd = p.perfectX + p.perfectWidth;
+                if (stickEnd >= perfectStart && stickEnd <= perfectEnd) {
+                    bonus = 4;
+                    playerStats.totalPerfects++;
+                    floatingScores.push({x: p.x + p.width / 2, y: canvas.height/devicePixelRatio - platformHeight, text: `Perfect! +${bonus + baseScore}`, opacity: 1, life: 60 });
+                    createPerfectLandingParticles(stickEnd, stick.y);
+                }
+                
+                score += baseScore + bonus;
+                storyProgress++; 
+                scoreDisplay.textContent = score; 
+                checkAchievements();
+                gameState = 'walking';
+            } else { 
+                playerStats.consecutiveIce = 0;
+                gameState = 'walking_to_fall'; 
+            } 
+        }
+        function draw() { 
+            ctx.clearRect(0, 0, canvas.width / devicePixelRatio, canvas.height / devicePixelRatio); 
+            drawBackground(); drawPlatforms(); drawObstacles(); drawStick(); 
+            drawCharacter(ctx, stickman, selectedCharacter, gameState); 
+            drawParticles(); drawFloatingScores(); 
+        }
         function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
         function handleInteractionStart() { if (gameState === 'waiting') gameState = 'growing'; }
         function handleInteractionEnd() { if (gameState === 'growing') gameState = 'falling'; }
-        infoOverlay.addEventListener('click', (e) => { 
-            // 스테이지 클리어 화면은 자체 버튼으로 처리하므로, 게임 오버 시에만 전체 클릭을 감지합니다.
-            if (gameState === 'over') showMenu(); 
-        });
+
+        infoOverlay.addEventListener('click', (e) => { if (gameState === 'over' || (gameState === 'story_win' && !e.target.closest('button'))) showMenu(); });
         canvas.addEventListener('mousedown', handleInteractionStart); canvas.addEventListener('mouseup', handleInteractionEnd);
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInteractionStart(e); }, { passive: false });
         canvas.addEventListener('touchend', (e) => { e.preventDefault(); handleInteractionEnd(e); });
         window.addEventListener('resize', () => { if(gameState !== 'menu' && gameState !== 'over' && gameState !== 'story_win') init(); else if(gameState === 'menu') resizeCanvas(); });
-        resizeCanvas(); showMenu(); gameLoop();
+        
+        loadData();
+        resizeCanvas();
+        showMenu();
+        gameLoop();
     </script>
 </body>
 </html>
