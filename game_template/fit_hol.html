@@ -165,6 +165,11 @@
             color: #000;
             box-shadow: none;
         }
+        @media (max-width: 768px) {
+            .title { font-size: 3em; }
+            #stage-select-grid { grid-template-columns: repeat(5, 1fr); gap: 15px; }
+            .stage-btn { width: 55px; height: 55px; }
+        }
     </style>
 </head>
 <body>
@@ -234,16 +239,15 @@
         let currentSpeed = 20;
         for (let i = 0; i < 50; i++) {
             let shape;
-            if (i < 10) shape = availableShapes[i % 2]; // I, L
-            else if (i < 20) shape = availableShapes[2 + (i % 3)]; // T, S, O
-            else if (i < 30) shape = availableShapes[3 + (i % 3)]; // S, O, U
-            else if (i < 40) shape = availableShapes[4 + (i % 3)]; // O, U, PLUS
-            else shape = availableShapes[i % availableShapes.length]; // All shapes
+            if (i < 10) shape = availableShapes[i % 2];
+            else if (i < 20) shape = availableShapes[2 + (i % 3)];
+            else if (i < 30) shape = availableShapes[3 + (i % 3)];
+            else if (i < 40) shape = availableShapes[4 + (i % 3)];
+            else shape = availableShapes[i % availableShapes.length];
 
             stageConfig.push({ speed: Math.round(currentSpeed), shape: shape });
-            currentSpeed += 1.2; // gradually increase speed
+            currentSpeed += 1.2;
         }
-
 
         const shapes = {
             'I': [{x:0,y:0},{x:0,y:1},{x:0,y:2}],
@@ -304,35 +308,59 @@
         }
 
         function createWall(shapeType) {
-            const wall = new THREE.Group();
+            const wallGroup = new THREE.Group();
             const mat = new THREE.MeshPhongMaterial({ color: 0xff00aa, emissive: 0xff00aa, emissiveIntensity: 0.3 });
             const holeRotation = Math.floor(Math.random() * 4) * (Math.PI / 2);
             const holeOffset = new THREE.Vector2(
                 (Math.random() - 0.5) * (MOVE_AREA_RADIUS * 1.5),
                 (Math.random() - 0.5) * (MOVE_AREA_RADIUS * 1.5)
             );
-            const holeBBox = new THREE.Box2();
-            shapes[shapeType].forEach(pos => {
-                 const rotatedPos = new THREE.Vector2(pos.x, pos.y).multiplyScalar(CUBE_SIZE).rotateAround(new THREE.Vector2(), holeRotation);
-                 holeBBox.expandByPoint(rotatedPos);
+
+            const holeSizeMultiplier = Math.max(1.2, 4.0 - currentStage * 0.06);
+
+            const shapeCoords = shapes[shapeType];
+            const center = new THREE.Vector2();
+            shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
+            center.divideScalar(shapeCoords.length);
+            
+            const holePositions = new Set();
+            shapeCoords.forEach(pos => {
+                let blockCenter = new THREE.Vector2((pos.x - center.x), (pos.y - center.y));
+                let rotated = blockCenter.rotateAround(new THREE.Vector2(), holeRotation);
+                holePositions.add(`${Math.round(rotated.x)},${Math.round(rotated.y)}`);
             });
-            const boundingSize = 40;
-            const holeSizeMultiplier = Math.max(1.2, 4.0 - currentStage * 0.06); // Adjusted for 50 stages
-            const holeWidth = ((holeBBox.max.x - holeBBox.min.x) + CUBE_SIZE) * holeSizeMultiplier;
-            const holeHeight = ((holeBBox.max.y - holeBBox.min.y) + CUBE_SIZE) * holeSizeMultiplier;
-            const segments = [
-                { x: holeOffset.x, y: holeOffset.y + holeHeight/2 + boundingSize/2, w: boundingSize*2.5, h: boundingSize },
-                { x: holeOffset.x, y: holeOffset.y - holeHeight/2 - boundingSize/2, w: boundingSize*2.5, h: boundingSize },
-                { x: holeOffset.x - holeWidth/2 - boundingSize/2, y: holeOffset.y, w: boundingSize, h: holeHeight*1.2 },
-                { x: holeOffset.x + holeWidth/2 + boundingSize/2, y: holeOffset.y, w: boundingSize, h: holeHeight*1.2 },
-            ];
-            segments.forEach(seg => {
-                const geo = new THREE.BoxGeometry(seg.w, seg.h, 2);
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(seg.x, seg.y, 0);
-                wall.add(mesh);
-            });
-            return wall;
+            
+            const wallSize = 15; // Grid size for the wall
+            for (let x = -wallSize; x <= wallSize; x++) {
+                for (let y = -wallSize; y <= wallSize; y++) {
+                    if (!holePositions.has(`${x},${y}`)) {
+                        const blockGeo = new THREE.BoxGeometry(CUBE_SIZE * holeSizeMultiplier, CUBE_SIZE * holeSizeMultiplier, 2);
+                        const blockMesh = new THREE.Mesh(blockGeo, mat);
+                        blockMesh.position.set(
+                            x * CUBE_SIZE * holeSizeMultiplier + holeOffset.x, 
+                            y * CUBE_SIZE * holeSizeMultiplier + holeOffset.y, 
+                            0
+                        );
+                        wallGroup.add(blockMesh);
+                    }
+                }
+            }
+
+            return wallGroup;
+        }
+
+        function isColliding(playerObject, wallObject) {
+            const wallBlocks = wallObject.children;
+            for (const playerBlock of playerObject.children) {
+                const playerBox = new THREE.Box3().setFromObject(playerBlock);
+                for (const wallBlock of wallBlocks) {
+                    const wallBox = new THREE.Box3().setFromObject(wallBlock);
+                    if (playerBox.intersectsBox(wallBox)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         function startGame(stageIndex) {
@@ -387,7 +415,7 @@
             if (currentStage >= stageConfig.length) {
                 winGame(); return;
             }
-            setTimeout(() => { if(isPlaying) loadStage(currentStage); }, 1500);
+            setTimeout(() => { if(isPlaying) loadStage(currentStage); }, 2000);
         }
 
         function endGame(isWin = false) {
@@ -424,21 +452,12 @@
                 if (currentWall) {
                     const wallZ = currentWall.position.z;
                     if (wallZ < player.position.z + 1.5 && wallZ > player.position.z - 1.5 && currentWall.state !== 'passed') {
-                        let collision = false;
-                        const wallPanels = currentWall.children;
-                        for (const playerBlock of player.children) {
-                            const playerBox = new THREE.Box3().setFromObject(playerBlock);
-                            for (const panel of wallPanels) {
-                                const panelBox = new THREE.Box3().setFromObject(panel);
-                                if (playerBox.intersectsBox(panelBox)) {
-                                    collision = true; break;
-                                }
-                            }
-                            if (collision) break;
+                        if (isColliding(player, currentWall)) {
+                            endGame();
                         }
-                        if (collision) { endGame(); }
-                    } else if (wallZ > player.position.z + 1.5 && currentWall.state !== 'passed') {
+                    } else if (wallZ > camera.position.z && currentWall.state !== 'passed') {
                         currentWall.state = 'passed';
+                        scene.remove(currentWall);
                         nextStage();
                     }
                 }
@@ -456,7 +475,7 @@
         function showStageCleared(text) {
             stageClearedText.textContent = text;
             stageClearedText.style.opacity = 1;
-            setTimeout(() => { stageClearedText.style.opacity = 0; }, 1000);
+            setTimeout(() => { stageClearedText.style.opacity = 0; }, 1500);
         }
         
         function createStageSelectButtons() {
