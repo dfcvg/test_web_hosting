@@ -272,43 +272,115 @@
             let gameSpeed, score = 0, isPlaying = false, currentStage = 0;
             const MOVE_AREA_RADIUS = 8;
 
-            // 스테이지별 고정 설정
+            // 스테이지별 고정 설정 - 다중 구멍 시스템 (속도 25 이하로 제한)
             const stageConfig = [
-                // L 모양 스테이지들
-                { speed: 20, shape: 'L', holeRotation: 0, holeOffset: { x: 0, y: 0 } },
-                { speed: 21, shape: 'L', holeRotation: Math.PI / 2, holeOffset: { x: 2, y: 1 } },
-                { speed: 22, shape: 'L', holeRotation: Math.PI, holeOffset: { x: -1, y: 2 } },
-                { speed: 24, shape: 'L', holeRotation: Math.PI * 1.5, holeOffset: { x: 1, y: -1 } },
+                // 기본 단일 구멍 스테이지들 (1-12)
+                { speed: 8, shape: 'L', holes: [{ shape: 'L', rotation: 0, offset: { x: 0, y: 0 } }] },
+                { speed: 9, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI / 2, offset: { x: 2, y: 1 } }] },
+                { speed: 10, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI, offset: { x: -1, y: 2 } }] },
+                { speed: 11, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI * 1.5, offset: { x: 1, y: -1 } }] },
 
-                // T 모양 스테이지들  
-                { speed: 25, shape: 'T', holeRotation: 0, holeOffset: { x: 0, y: 0 } },
-                { speed: 26, shape: 'T', holeRotation: Math.PI / 2, holeOffset: { x: -2, y: 1 } },
-                { speed: 28, shape: 'T', holeRotation: Math.PI, holeOffset: { x: 1, y: -2 } },
-                { speed: 29, shape: 'T', holeRotation: Math.PI * 1.5, holeOffset: { x: 2, y: 2 } },
+                { speed: 12, shape: 'T', holes: [{ shape: 'T', rotation: 0, offset: { x: 0, y: 0 } }] },
+                { speed: 13, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI / 2, offset: { x: -2, y: 1 } }] },
+                { speed: 14, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI, offset: { x: 1, y: -2 } }] },
+                { speed: 15, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI * 1.5, offset: { x: 2, y: 2 } }] },
 
-                // O 모양 스테이지들
-                { speed: 30, shape: 'O', holeRotation: 0, holeOffset: { x: 0, y: 0 } },
-                { speed: 32, shape: 'O', holeRotation: 0, holeOffset: { x: -1, y: 1 } },
-                { speed: 33, shape: 'O', holeRotation: 0, holeOffset: { x: 2, y: -1 } },
-                { speed: 35, shape: 'O', holeRotation: 0, holeOffset: { x: -2, y: 2 } },
+                { speed: 16, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: 0, y: 0 } }] },
+                { speed: 17, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: -1, y: 1 } }] },
+                { speed: 18, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: 2, y: -1 } }] },
+                { speed: 19, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: -2, y: 2 } }] },
+
+                // 다중 구멍 스테이지들 (13-16) - 2개 구멍
+                {
+                    speed: 20, shape: 'L', holes: [
+                        { shape: 'L', rotation: 0, offset: { x: -3, y: 2 } },
+                        { shape: 'T', rotation: Math.PI / 2, offset: { x: 3, y: -1 } }
+                    ]
+                },
+                {
+                    speed: 21, shape: 'T', holes: [
+                        { shape: 'T', rotation: 0, offset: { x: 0, y: 3 } },
+                        { shape: 'O', rotation: 0, offset: { x: -2, y: -2 } }
+                    ]
+                },
+                {
+                    speed: 22, shape: 'O', holes: [
+                        { shape: 'O', rotation: 0, offset: { x: 2, y: 2 } },
+                        { shape: 'L', rotation: Math.PI, offset: { x: -3, y: 0 } }
+                    ]
+                },
+                {
+                    speed: 23, shape: 'L', holes: [
+                        { shape: 'L', rotation: Math.PI / 2, offset: { x: 1, y: 3 } },
+                        { shape: 'L', rotation: Math.PI * 1.5, offset: { x: -2, y: -2 } }
+                    ]
+                },
+
+                // 더 복잡한 다중 구멍 스테이지들 (17-19) - 3개 구멍
+                {
+                    speed: 24, shape: 'T', holes: [
+                        { shape: 'T', rotation: 0, offset: { x: 0, y: 3 } },
+                        { shape: 'L', rotation: Math.PI / 2, offset: { x: -4, y: 0 } },
+                        { shape: 'O', rotation: 0, offset: { x: 3, y: -2 } }
+                    ]
+                },
+                {
+                    speed: 25, shape: 'L', holes: [
+                        { shape: 'L', rotation: 0, offset: { x: -3, y: 3 } },
+                        { shape: 'T', rotation: Math.PI, offset: { x: 2, y: 1 } },
+                        { shape: 'L', rotation: Math.PI * 1.5, offset: { x: 0, y: -3 } }
+                    ]
+                },
             ];
 
-            // 나머지 스테이지들을 패턴으로 채우기
-            let currentSpeed = 36;
-            const basePatterns = stageConfig.slice(); // 기본 12개 패턴 복사
+            // 나머지 스테이지들을 복잡한 패턴으로 채우기 (속도 25 이하 유지)
+            let currentSpeed = 15;
+            const complexPatterns = [
+                // 4개 구멍 패턴들
+                {
+                    shape: 'L', holes: [
+                        { shape: 'L', rotation: 0, offset: { x: -4, y: 3 } },
+                        { shape: 'T', rotation: Math.PI / 2, offset: { x: 0, y: 3 } },
+                        { shape: 'O', rotation: 0, offset: { x: 4, y: 0 } },
+                        { shape: 'L', rotation: Math.PI, offset: { x: -2, y: -3 } }
+                    ]
+                },
+                {
+                    shape: 'T', holes: [
+                        { shape: 'T', rotation: 0, offset: { x: 0, y: 4 } },
+                        { shape: 'L', rotation: Math.PI / 2, offset: { x: -4, y: 1 } },
+                        { shape: 'O', rotation: 0, offset: { x: 3, y: -1 } },
+                        { shape: 'T', rotation: Math.PI * 1.5, offset: { x: 1, y: -4 } }
+                    ]
+                },
+                {
+                    shape: 'O', holes: [
+                        { shape: 'O', rotation: 0, offset: { x: -3, y: 3 } },
+                        { shape: 'L', rotation: 0, offset: { x: 3, y: 2 } },
+                        { shape: 'T', rotation: Math.PI, offset: { x: 0, y: -2 } },
+                        { shape: 'O', rotation: 0, offset: { x: -4, y: -3 } }
+                    ]
+                }
+            ];
 
             while (stageConfig.length < 50) {
-                const pattern = basePatterns[stageConfig.length % basePatterns.length];
-                stageConfig.push({
-                    speed: Math.round(currentSpeed),
-                    shape: pattern.shape,
-                    holeRotation: pattern.holeRotation,
-                    holeOffset: {
-                        x: pattern.holeOffset.x + (Math.random() - 0.5) * 2,
-                        y: pattern.holeOffset.y + (Math.random() - 0.5) * 2
+                const patternIndex = Math.max(0, stageConfig.length - 20);
+                const pattern = complexPatterns[patternIndex % complexPatterns.length];
+                const newHoles = pattern.holes.map(hole => ({
+                    shape: hole.shape,
+                    rotation: hole.rotation + (Math.random() - 0.5) * Math.PI / 6, // 약간의 랜덤 회전
+                    offset: {
+                        x: hole.offset.x + (Math.random() - 0.5) * 1.5,
+                        y: hole.offset.y + (Math.random() - 0.5) * 1.5
                     }
+                }));
+
+                stageConfig.push({
+                    speed: Math.min(25, Math.round(currentSpeed)), // 최대 속도 25로 제한
+                    shape: pattern.shape,
+                    holes: newHoles
                 });
-                currentSpeed += 1.5;
+                currentSpeed += 0.5; // 속도 증가량을 줄임
             }
 
             const shapes = {
@@ -369,42 +441,54 @@
                 return playerGroup;
             }
 
-            function createWall(shapeType, holeRotation, holeOffset) {
+            function createWall(playerShape, holes) {
                 const wallGroup = new THREE.Group();
                 const mat = new THREE.MeshPhongMaterial({ color: 0xff00aa, emissive: 0xff00aa, emissiveIntensity: 0.3 });
 
-                const shapeCoords = shapes[shapeType];
-                const center = new THREE.Vector2();
-                shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
-                center.divideScalar(shapeCoords.length);
+                // 모든 구멍 위치를 계산
+                const allHolePositions = new Set();
+                const correctHolePositions = new Set(); // 플레이어 모양과 일치하는 구멍
 
-                const holePositions = new Set();
-                shapeCoords.forEach(pos => {
-                    let blockCenter = new THREE.Vector2((pos.x - center.x), (pos.y - center.y));
-                    let rotated = blockCenter.rotateAround(new THREE.Vector2(), holeRotation);
-                    holePositions.add(`${Math.round(rotated.x)},${Math.round(rotated.y)}`);
+                holes.forEach(hole => {
+                    const shapeCoords = shapes[hole.shape];
+                    const center = new THREE.Vector2();
+                    shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
+                    center.divideScalar(shapeCoords.length);
+
+                    shapeCoords.forEach(pos => {
+                        let blockCenter = new THREE.Vector2((pos.x - center.x), (pos.y - center.y));
+                        let rotated = blockCenter.rotateAround(new THREE.Vector2(), hole.rotation);
+                        const finalX = Math.round(rotated.x + hole.offset.x);
+                        const finalY = Math.round(rotated.y + hole.offset.y);
+                        const posKey = `${finalX},${finalY}`;
+
+                        allHolePositions.add(posKey);
+
+                        // 플레이어 모양과 일치하는 구멍인지 확인
+                        if (hole.shape === playerShape) {
+                            correctHolePositions.add(posKey);
+                        }
+                    });
                 });
 
                 // 벽 정보 저장
                 wallGroup.userData = {
-                    holePositions: holePositions,
-                    holeOffset: new THREE.Vector2(holeOffset.x * CUBE_SIZE, holeOffset.y * CUBE_SIZE),
-                    holeRotation: holeRotation,
+                    allHolePositions: allHolePositions,
+                    correctHolePositions: correctHolePositions,
+                    holes: holes,
+                    playerShape: playerShape,
                     originalMaterial: mat,
-                    greenMaterial: new THREE.MeshPhongMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.3 })
+                    greenMaterial: new THREE.MeshPhongMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.3 }),
+                    redMaterial: new THREE.MeshPhongMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3 })
                 };
 
                 const wallSize = 15;
                 for (let x = -wallSize; x <= wallSize; x++) {
                     for (let y = -wallSize; y <= wallSize; y++) {
-                        if (!holePositions.has(`${x},${y}`)) {
+                        if (!allHolePositions.has(`${x},${y}`)) {
                             const blockGeo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, 2);
                             const blockMesh = new THREE.Mesh(blockGeo, mat);
-                            blockMesh.position.set(
-                                x * CUBE_SIZE + holeOffset.x * CUBE_SIZE,
-                                y * CUBE_SIZE + holeOffset.y * CUBE_SIZE,
-                                0
-                            );
+                            blockMesh.position.set(x * CUBE_SIZE, y * CUBE_SIZE, 0);
                             wallGroup.add(blockMesh);
                         }
                     }
@@ -430,36 +514,38 @@
             function checkPlayerFitsHole(playerObject, wallObject) {
                 if (!wallObject.userData) return false;
 
-                const { holePositions, holeOffset } = wallObject.userData;
+                const { allHolePositions, correctHolePositions } = wallObject.userData;
                 const playerBlocks = playerObject.children;
 
-                // 플레이어 블록들의 그리드 위치 계산 (플레이어의 회전 고려)
+                // 플레이어 블록들의 그리드 위치 계산
                 const playerGridPositions = new Set();
                 playerBlocks.forEach(block => {
                     const worldPos = new THREE.Vector3();
                     block.getWorldPosition(worldPos);
 
-                    // 벽의 오프셋을 고려하여 그리드 좌표로 변환
-                    const relativePos = new THREE.Vector2(
-                        worldPos.x - holeOffset.x,
-                        worldPos.y - holeOffset.y
-                    );
-
-                    const gridX = Math.round(relativePos.x / CUBE_SIZE);
-                    const gridY = Math.round(relativePos.y / CUBE_SIZE);
+                    const gridX = Math.round(worldPos.x / CUBE_SIZE);
+                    const gridY = Math.round(worldPos.y / CUBE_SIZE);
 
                     playerGridPositions.add(`${gridX},${gridY}`);
                 });
 
                 // 플레이어 블록들이 모두 구멍 위치에 있는지 확인
                 for (const pos of playerGridPositions) {
-                    if (!holePositions.has(pos)) {
-                        return false;
+                    if (!allHolePositions.has(pos)) {
+                        return { inHole: false, correctHole: false };
                     }
                 }
 
-                // 구멍 위치가 모두 플레이어 블록으로 채워져 있는지도 확인 (정확한 매칭)
-                return playerGridPositions.size === holePositions.size;
+                // 플레이어가 올바른 구멍(같은 모양)에 있는지 확인
+                let correctMatch = true;
+                for (const pos of playerGridPositions) {
+                    if (!correctHolePositions.has(pos)) {
+                        correctMatch = false;
+                        break;
+                    }
+                }
+
+                return { inHole: true, correctHole: correctMatch };
             }
 
             function startGame(stageIndex) {
@@ -497,8 +583,8 @@
                 });
                 scene.add(ghostPlayer);
 
-                currentWall = createWall(config.shape, config.holeRotation, config.holeOffset);
-                currentWall.position.z = -120;
+                currentWall = createWall(config.shape, config.holes);
+                currentWall.position.z = -200; // 더 멀리서 시작
                 scene.add(currentWall);
 
                 updateUI();
@@ -548,13 +634,21 @@
                         ghostPlayer.rotation.z = player.rotation.z;
 
                         // 그림자가 구멍에 맞는지 확인하고 벽 색상 변경
-                        if (checkPlayerFitsHole(ghostPlayer, currentWall)) {
-                            // 벽을 초록색으로 변경
-                            currentWall.children.forEach(block => {
-                                block.material = currentWall.userData.greenMaterial;
-                            });
+                        const holeCheck = checkPlayerFitsHole(ghostPlayer, currentWall);
+                        if (holeCheck.inHole) {
+                            if (holeCheck.correctHole) {
+                                // 올바른 구멍에 맞으면 초록색
+                                currentWall.children.forEach(block => {
+                                    block.material = currentWall.userData.greenMaterial;
+                                });
+                            } else {
+                                // 잘못된 구멍에 맞으면 빨간색
+                                currentWall.children.forEach(block => {
+                                    block.material = currentWall.userData.redMaterial;
+                                });
+                            }
                         } else {
-                            // 벽을 원래 색상으로 변경
+                            // 구멍에 맞지 않으면 원래 색상
                             currentWall.children.forEach(block => {
                                 block.material = currentWall.userData.originalMaterial;
                             });
@@ -566,8 +660,9 @@
                     if (currentWall) {
                         const wallZ = currentWall.position.z;
                         if (wallZ < player.position.z + 1.5 && wallZ > player.position.z - 1.5 && currentWall.state !== 'passed') {
-                            // 플레이어가 구멍에 맞는지 먼저 확인
-                            if (!checkPlayerFitsHole(player, currentWall) && isColliding(player, currentWall)) {
+                            // 플레이어가 올바른 구멍에 맞는지 먼저 확인
+                            const playerHoleCheck = checkPlayerFitsHole(player, currentWall);
+                            if (!(playerHoleCheck.inHole && playerHoleCheck.correctHole) && isColliding(player, currentWall)) {
                                 endGame();
                             }
                         } else if (wallZ > camera.position.z && currentWall.state !== 'passed') {
