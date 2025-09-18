@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>핏 더 홀</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -14,6 +22,7 @@
             color: #fff;
             font-family: 'Consolas', 'Monaco', monospace;
         }
+
         #game-container {
             width: 100%;
             height: 100%;
@@ -23,6 +32,7 @@
             align-items: center;
             cursor: none;
         }
+
         #canvas-container {
             width: 100%;
             height: 100%;
@@ -30,6 +40,7 @@
             top: 0;
             left: 0;
         }
+
         #ui-layer {
             position: absolute;
             top: 0;
@@ -44,9 +55,10 @@
             z-index: 10;
             pointer-events: none;
         }
+
         .screen {
             pointer-events: all;
-            background-color: rgba(0,0,0,0.7);
+            background-color: rgba(0, 0, 0, 0.7);
             width: 100%;
             height: 100%;
             display: flex;
@@ -57,15 +69,18 @@
             transition: opacity 0.5s;
             overflow-y: auto;
         }
+
         .hidden {
             opacity: 0;
             pointer-events: none;
         }
+
         .title {
             font-size: 4em;
             color: #0ff;
             text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff;
         }
+
         .subtitle {
             font-size: 1.2em;
             margin-top: 20px;
@@ -73,6 +88,7 @@
             text-shadow: 0 0 5px #f0f;
             line-height: 1.5;
         }
+
         .button {
             margin-top: 40px;
             padding: 15px 30px;
@@ -87,10 +103,12 @@
             transition: transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 0 15px #0ff, 0 0 25px #0ff;
         }
+
         .button:hover {
             transform: scale(1.1);
             box-shadow: 0 0 25px #0ff, 0 0 40px #0ff;
         }
+
         #hud {
             position: absolute;
             top: 20px;
@@ -105,6 +123,7 @@
             opacity: 0;
             transition: opacity 0.5s;
         }
+
         #stage-cleared-text {
             font-size: 3em;
             color: #0ff;
@@ -112,6 +131,7 @@
             opacity: 0;
             transition: opacity 0.5s;
         }
+
         .rotate-buttons {
             position: absolute;
             bottom: 20px;
@@ -125,6 +145,7 @@
             opacity: 0;
             transition: opacity 0.5s;
         }
+
         .rotate-btn {
             width: 80px;
             height: 80px;
@@ -139,6 +160,7 @@
             align-items: center;
             user-select: none;
         }
+
         #stage-select-grid {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -146,32 +168,47 @@
             padding: 20px;
             max-width: 90vw;
         }
+
         .stage-btn {
             width: 50px;
             height: 50px;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0, 0, 0, 0.5);
             border: 2px solid #f0f;
             color: #f0f;
             font-size: 1.2em;
             cursor: pointer;
             transition: background-color 0.2s, color 0.2s;
         }
+
         .stage-btn:hover {
             background-color: #f0f;
             color: #000;
         }
+
         #back-button {
             background-color: #888;
             color: #000;
             box-shadow: none;
         }
+
         @media (max-width: 768px) {
-            .title { font-size: 3em; }
-            #stage-select-grid { grid-template-columns: repeat(5, 1fr); gap: 15px; }
-            .stage-btn { width: 55px; height: 55px; }
+            .title {
+                font-size: 3em;
+            }
+
+            #stage-select-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 15px;
+            }
+
+            .stage-btn {
+                width: 55px;
+                height: 55px;
+            }
         }
     </style>
 </head>
+
 <body>
     <div id="game-container">
         <div id="canvas-container"></div>
@@ -188,14 +225,15 @@
             </div>
             <div id="gameover-screen" class="screen hidden">
                 <h1 class="title">GAME OVER</h1>
-                <button id="restartButton" class="button" style="background-color: #ff6b6b; box-shadow: 0 0 15px #ff6b6b;">RESTART</button>
+                <button id="restartButton" class="button"
+                    style="background-color: #ff6b6b; box-shadow: 0 0 15px #ff6b6b;">RESTART</button>
             </div>
             <div id="win-screen" class="screen hidden">
                 <h1 class="title">ALL CLEAR!</h1>
                 <p class="subtitle">모든 스테이지를 클리어했습니다!</p>
                 <button id="restartButton" class="button win-restart">PLAY AGAIN</button>
             </div>
-             <div id="stage-cleared-text"></div>
+            <div id="stage-cleared-text"></div>
             <div id="hud">
                 <div id="score-display">SCORE: 0</div>
                 <div id="stage-display">STAGE: 1/50</div>
@@ -210,344 +248,421 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const CUBE_SIZE = 1.5;
-        // --- UI Elements ---
-        const startScreen = document.getElementById('start-screen');
-        const stageSelectScreen = document.getElementById('stage-select-screen');
-        const gameOverScreen = document.getElementById('gameover-screen');
-        const winScreen = document.getElementById('win-screen');
-        const startButton = document.getElementById('startButton');
-        const restartButtons = document.querySelectorAll('#restartButton');
-        const backButton = document.getElementById('back-button');
-        const stageGrid = document.getElementById('stage-select-grid');
-        const scoreDisplay = document.getElementById('score-display');
-        const stageDisplay = document.getElementById('stage-display');
-        const hud = document.getElementById('hud');
-        const stageClearedText = document.getElementById('stage-cleared-text');
-        const rotateButtonsContainer = document.getElementById('rotate-buttons-container');
-        const rotateLeftBtn = document.getElementById('rotate-left-btn');
-        const rotateRightBtn = document.getElementById('rotate-right-btn');
-        
-        // --- Game Variables ---
-        let scene, camera, renderer, player, clock, currentWall, ghostPlayer;
-        let gameSpeed, score = 0, isPlaying = false, currentStage = 0;
-        const MOVE_AREA_RADIUS = 8;
-        
-        const stageConfig = [];
-        const availableShapes = ['I', 'L', 'T', 'S', 'O', 'U', 'PLUS'];
-        let currentSpeed = 20;
-        for (let i = 0; i < 50; i++) {
-            let shape;
-            if (i < 10) shape = availableShapes[i % 2];
-            else if (i < 20) shape = availableShapes[2 + (i % 3)];
-            else if (i < 30) shape = availableShapes[3 + (i % 3)];
-            else if (i < 40) shape = availableShapes[4 + (i % 3)];
-            else shape = availableShapes[i % availableShapes.length];
+        document.addEventListener('DOMContentLoaded', () => {
+            const CUBE_SIZE = 1.5;
+            // --- UI Elements ---
+            const startScreen = document.getElementById('start-screen');
+            const stageSelectScreen = document.getElementById('stage-select-screen');
+            const gameOverScreen = document.getElementById('gameover-screen');
+            const winScreen = document.getElementById('win-screen');
+            const startButton = document.getElementById('startButton');
+            const restartButtons = document.querySelectorAll('#restartButton');
+            const backButton = document.getElementById('back-button');
+            const stageGrid = document.getElementById('stage-select-grid');
+            const scoreDisplay = document.getElementById('score-display');
+            const stageDisplay = document.getElementById('stage-display');
+            const hud = document.getElementById('hud');
+            const stageClearedText = document.getElementById('stage-cleared-text');
+            const rotateButtonsContainer = document.getElementById('rotate-buttons-container');
+            const rotateLeftBtn = document.getElementById('rotate-left-btn');
+            const rotateRightBtn = document.getElementById('rotate-right-btn');
 
-            stageConfig.push({ speed: Math.round(currentSpeed), shape: shape });
-            currentSpeed += 1.2;
-        }
+            // --- Game Variables ---
+            let scene, camera, renderer, player, clock, currentWall, ghostPlayer;
+            let gameSpeed, score = 0, isPlaying = false, currentStage = 0;
+            const MOVE_AREA_RADIUS = 8;
 
-        const shapes = {
-            'I': [{x:0,y:0},{x:0,y:1},{x:0,y:2}],
-            'L': [{x:0,y:0},{x:0,y:1},{x:1,y:1}],
-            'T': [{x:0,y:0},{x:-1,y:0},{x:1,y:0},{x:0,y:1}],
-            'S': [{x:0,y:0},{x:1,y:0},{x:0,y:1},{x:-1,y:1}],
-            'O': [{x:0,y:0},{x:1,y:0},{x:0,y:1},{x:1,y:1}],
-            'PLUS': [{x:0,y:0},{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}],
-            'U': [{x:0,y:0},{x:0,y:1},{x:1,y:1},{x:2,y:1},{x:2,y:0}],
-        };
+            // 스테이지별 고정 설정
+            const stageConfig = [
+                // L 모양 스테이지들
+                { speed: 20, shape: 'L', holeRotation: 0, holeOffset: { x: 0, y: 0 } },
+                { speed: 21, shape: 'L', holeRotation: Math.PI / 2, holeOffset: { x: 2, y: 1 } },
+                { speed: 22, shape: 'L', holeRotation: Math.PI, holeOffset: { x: -1, y: 2 } },
+                { speed: 24, shape: 'L', holeRotation: Math.PI * 1.5, holeOffset: { x: 1, y: -1 } },
 
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000011);
-            scene.fog = new THREE.Fog(0x000011, 50, 200);
-            clock = new THREE.Clock();
+                // T 모양 스테이지들  
+                { speed: 25, shape: 'T', holeRotation: 0, holeOffset: { x: 0, y: 0 } },
+                { speed: 26, shape: 'T', holeRotation: Math.PI / 2, holeOffset: { x: -2, y: 1 } },
+                { speed: 28, shape: 'T', holeRotation: Math.PI, holeOffset: { x: 1, y: -2 } },
+                { speed: 29, shape: 'T', holeRotation: Math.PI * 1.5, holeOffset: { x: 2, y: 2 } },
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 5, 15);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
+                // O 모양 스테이지들
+                { speed: 30, shape: 'O', holeRotation: 0, holeOffset: { x: 0, y: 0 } },
+                { speed: 32, shape: 'O', holeRotation: 0, holeOffset: { x: -1, y: 1 } },
+                { speed: 33, shape: 'O', holeRotation: 0, holeOffset: { x: 2, y: -1 } },
+                { speed: 35, shape: 'O', holeRotation: 0, holeOffset: { x: -2, y: 2 } },
+            ];
 
-            const light = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(light);
-            const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.5);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(directionalLight);
-            const hemiLight = new THREE.HemisphereLight( 0x00ffff, 0xff00ff, 0.4 );
-            scene.add(hemiLight);
-            
-            const gridHelper = new THREE.GridHelper(400, 40, 0x00ffff, 0x00ffff);
-            gridHelper.position.y = -MOVE_AREA_RADIUS - 2;
-            scene.add(gridHelper);
+            // 나머지 스테이지들을 패턴으로 채우기
+            let currentSpeed = 36;
+            const basePatterns = stageConfig.slice(); // 기본 12개 패턴 복사
 
-            setupEventListeners();
-            createStageSelectButtons();
-            
-            animate();
-        }
-
-        function createPlayerModel(shapeType) {
-            const playerGroup = new THREE.Group();
-            const mat = new THREE.MeshStandardMaterial({ 
-                color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.3, metalness: 0.5, roughness: 0.2
-            });
-            const shapeCoords = shapes[shapeType];
-            const center = new THREE.Vector2();
-            shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
-            center.divideScalar(shapeCoords.length);
-            shapeCoords.forEach(pos => {
-                const block = new THREE.Mesh(new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE), mat);
-                block.position.set((pos.x - center.x) * CUBE_SIZE, (pos.y - center.y) * CUBE_SIZE, 0);
-                playerGroup.add(block);
-            });
-            return playerGroup;
-        }
-
-        function createWall(shapeType) {
-            const wallGroup = new THREE.Group();
-            const mat = new THREE.MeshPhongMaterial({ color: 0xff00aa, emissive: 0xff00aa, emissiveIntensity: 0.3 });
-            const holeRotation = Math.floor(Math.random() * 4) * (Math.PI / 2);
-            const holeOffset = new THREE.Vector2(
-                (Math.random() - 0.5) * (MOVE_AREA_RADIUS * 1.5),
-                (Math.random() - 0.5) * (MOVE_AREA_RADIUS * 1.5)
-            );
-
-            const holeSizeMultiplier = Math.max(1.2, 4.0 - currentStage * 0.06);
-
-            const shapeCoords = shapes[shapeType];
-            const center = new THREE.Vector2();
-            shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
-            center.divideScalar(shapeCoords.length);
-            
-            const holePositions = new Set();
-            shapeCoords.forEach(pos => {
-                let blockCenter = new THREE.Vector2((pos.x - center.x), (pos.y - center.y));
-                let rotated = blockCenter.rotateAround(new THREE.Vector2(), holeRotation);
-                holePositions.add(`${Math.round(rotated.x)},${Math.round(rotated.y)}`);
-            });
-            
-            const wallSize = 15; // Grid size for the wall
-            for (let x = -wallSize; x <= wallSize; x++) {
-                for (let y = -wallSize; y <= wallSize; y++) {
-                    if (!holePositions.has(`${x},${y}`)) {
-                        const blockGeo = new THREE.BoxGeometry(CUBE_SIZE * holeSizeMultiplier, CUBE_SIZE * holeSizeMultiplier, 2);
-                        const blockMesh = new THREE.Mesh(blockGeo, mat);
-                        blockMesh.position.set(
-                            x * CUBE_SIZE * holeSizeMultiplier + holeOffset.x, 
-                            y * CUBE_SIZE * holeSizeMultiplier + holeOffset.y, 
-                            0
-                        );
-                        wallGroup.add(blockMesh);
+            while (stageConfig.length < 50) {
+                const pattern = basePatterns[stageConfig.length % basePatterns.length];
+                stageConfig.push({
+                    speed: Math.round(currentSpeed),
+                    shape: pattern.shape,
+                    holeRotation: pattern.holeRotation,
+                    holeOffset: {
+                        x: pattern.holeOffset.x + (Math.random() - 0.5) * 2,
+                        y: pattern.holeOffset.y + (Math.random() - 0.5) * 2
                     }
-                }
+                });
+                currentSpeed += 1.5;
             }
 
-            return wallGroup;
-        }
+            const shapes = {
+                'I': [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }],
+                'L': [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
+                'T': [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }],
+                'S': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 1 }],
+                'O': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }],
+                'PLUS': [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }],
+                'U': [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 2, y: 0 }],
+            };
 
-        function isColliding(playerObject, wallObject) {
-            const wallBlocks = wallObject.children;
-            for (const playerBlock of playerObject.children) {
-                const playerBox = new THREE.Box3().setFromObject(playerBlock);
-                for (const wallBlock of wallBlocks) {
-                    const wallBox = new THREE.Box3().setFromObject(wallBlock);
-                    if (playerBox.intersectsBox(wallBox)) {
-                        return true;
-                    }
-                }
+            function init() {
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x000011);
+                scene.fog = new THREE.Fog(0x000011, 50, 200);
+                clock = new THREE.Clock();
+
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 5, 15);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+                const light = new THREE.AmbientLight(0xffffff, 0.8);
+                scene.add(light);
+                const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.5);
+                directionalLight.position.set(1, 1, 1);
+                scene.add(directionalLight);
+                const hemiLight = new THREE.HemisphereLight(0x00ffff, 0xff00ff, 0.4);
+                scene.add(hemiLight);
+
+                const gridHelper = new THREE.GridHelper(400, 40, 0x00ffff, 0x00ffff);
+                gridHelper.position.y = -MOVE_AREA_RADIUS - 2;
+                scene.add(gridHelper);
+
+                setupEventListeners();
+                createStageSelectButtons();
+
+                animate();
             }
-            return false;
-        }
 
-        function startGame(stageIndex) {
-            score = 0;
-            currentStage = stageIndex;
-            stageSelectScreen.classList.add('hidden');
-            hud.style.opacity = 1;
-            rotateButtonsContainer.style.opacity = 1;
-            loadStage(currentStage);
-            isPlaying = true;
-        }
-
-        function loadStage(stageIndex) {
-            if (player) scene.remove(player);
-            if (currentWall) scene.remove(currentWall);
-            if (ghostPlayer) scene.remove(ghostPlayer);
-
-            const config = stageConfig[stageIndex];
-            gameSpeed = config.speed;
-            
-            player = createPlayerModel(config.shape);
-            player.position.z = 0;
-            scene.add(player);
-            
-            camera.position.set(0, 5, 15);
-            camera.lookAt(0, 0, 0);
-            
-            ghostPlayer = player.clone();
-            ghostPlayer.traverse((child) => {
-                if (child.isMesh) {
-                    child.material = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.3 });
-                }
-            });
-            scene.add(ghostPlayer);
-            
-            currentWall = createWall(config.shape);
-            currentWall.position.z = -120;
-            scene.add(currentWall);
-
-            updateUI();
-            currentWall.state = 'ready';
-
-            setTimeout(() => {
-                if (isPlaying) currentWall.state = 'moving';
-            }, 2500);
-        }
-        
-        function nextStage() {
-            score += 100 * (currentStage + 1);
-            currentStage++;
-            showStageCleared(`STAGE ${currentStage + 1} CLEAR!`);
-            if (currentStage >= stageConfig.length) {
-                winGame(); return;
+            function createPlayerModel(shapeType) {
+                const playerGroup = new THREE.Group();
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.3, metalness: 0.5, roughness: 0.2
+                });
+                const shapeCoords = shapes[shapeType];
+                const center = new THREE.Vector2();
+                shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
+                center.divideScalar(shapeCoords.length);
+                shapeCoords.forEach(pos => {
+                    const block = new THREE.Mesh(new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE), mat);
+                    block.position.set((pos.x - center.x) * CUBE_SIZE, (pos.y - center.y) * CUBE_SIZE, 0);
+                    playerGroup.add(block);
+                });
+                return playerGroup;
             }
-            setTimeout(() => { if(isPlaying) loadStage(currentStage); }, 2000);
-        }
 
-        function endGame(isWin = false) {
-            isPlaying = false;
-            if(ghostPlayer) ghostPlayer.visible = false;
-            if(player) player.visible = false;
-            if(currentWall) currentWall.visible = false;
+            function createWall(shapeType, holeRotation, holeOffset) {
+                const wallGroup = new THREE.Group();
+                const mat = new THREE.MeshPhongMaterial({ color: 0xff00aa, emissive: 0xff00aa, emissiveIntensity: 0.3 });
 
-            if (isWin) winScreen.classList.remove('hidden');
-            else gameOverScreen.classList.remove('hidden');
-            hud.style.opacity = 0;
-            rotateButtonsContainer.style.opacity = 0;
-        }
-        
-        function winGame() { endGame(true); }
+                const shapeCoords = shapes[shapeType];
+                const center = new THREE.Vector2();
+                shapeCoords.forEach(p => center.add(new THREE.Vector2(p.x, p.y)));
+                center.divideScalar(shapeCoords.length);
 
-        function animate() {
-            const delta = clock.getDelta();
+                const holePositions = new Set();
+                shapeCoords.forEach(pos => {
+                    let blockCenter = new THREE.Vector2((pos.x - center.x), (pos.y - center.y));
+                    let rotated = blockCenter.rotateAround(new THREE.Vector2(), holeRotation);
+                    holePositions.add(`${Math.round(rotated.x)},${Math.round(rotated.y)}`);
+                });
 
-            if (isPlaying) {
-                if (currentWall && currentWall.state === 'moving') {
-                    currentWall.position.z += gameSpeed * delta;
-                }
+                // 벽 정보 저장
+                wallGroup.userData = {
+                    holePositions: holePositions,
+                    holeOffset: new THREE.Vector2(holeOffset.x * CUBE_SIZE, holeOffset.y * CUBE_SIZE),
+                    holeRotation: holeRotation,
+                    originalMaterial: mat,
+                    greenMaterial: new THREE.MeshPhongMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.3 })
+                };
 
-                if(ghostPlayer && currentWall) {
-                    ghostPlayer.position.x = player.position.x;
-                    ghostPlayer.position.y = player.position.y;
-                    ghostPlayer.position.z = currentWall.position.z;
-                    ghostPlayer.rotation.z = player.rotation.z;
-                }
-
-                scene.updateMatrixWorld();
-                
-                if (currentWall) {
-                    const wallZ = currentWall.position.z;
-                    if (wallZ < player.position.z + 1.5 && wallZ > player.position.z - 1.5 && currentWall.state !== 'passed') {
-                        if (isColliding(player, currentWall)) {
-                            endGame();
+                const wallSize = 15;
+                for (let x = -wallSize; x <= wallSize; x++) {
+                    for (let y = -wallSize; y <= wallSize; y++) {
+                        if (!holePositions.has(`${x},${y}`)) {
+                            const blockGeo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, 2);
+                            const blockMesh = new THREE.Mesh(blockGeo, mat);
+                            blockMesh.position.set(
+                                x * CUBE_SIZE + holeOffset.x * CUBE_SIZE,
+                                y * CUBE_SIZE + holeOffset.y * CUBE_SIZE,
+                                0
+                            );
+                            wallGroup.add(blockMesh);
                         }
-                    } else if (wallZ > camera.position.z && currentWall.state !== 'passed') {
-                        currentWall.state = 'passed';
-                        scene.remove(currentWall);
-                        nextStage();
                     }
+                }
+
+                return wallGroup;
+            }
+
+            function isColliding(playerObject, wallObject) {
+                const wallBlocks = wallObject.children;
+                for (const playerBlock of playerObject.children) {
+                    const playerBox = new THREE.Box3().setFromObject(playerBlock);
+                    for (const wallBlock of wallBlocks) {
+                        const wallBox = new THREE.Box3().setFromObject(wallBlock);
+                        if (playerBox.intersectsBox(wallBox)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function checkPlayerFitsHole(playerObject, wallObject) {
+                if (!wallObject.userData) return false;
+
+                const { holePositions, holeOffset } = wallObject.userData;
+                const playerBlocks = playerObject.children;
+
+                // 플레이어 블록들의 그리드 위치 계산 (플레이어의 회전 고려)
+                const playerGridPositions = new Set();
+                playerBlocks.forEach(block => {
+                    const worldPos = new THREE.Vector3();
+                    block.getWorldPosition(worldPos);
+
+                    // 벽의 오프셋을 고려하여 그리드 좌표로 변환
+                    const relativePos = new THREE.Vector2(
+                        worldPos.x - holeOffset.x,
+                        worldPos.y - holeOffset.y
+                    );
+
+                    const gridX = Math.round(relativePos.x / CUBE_SIZE);
+                    const gridY = Math.round(relativePos.y / CUBE_SIZE);
+
+                    playerGridPositions.add(`${gridX},${gridY}`);
+                });
+
+                // 플레이어 블록들이 모두 구멍 위치에 있는지 확인
+                for (const pos of playerGridPositions) {
+                    if (!holePositions.has(pos)) {
+                        return false;
+                    }
+                }
+
+                // 구멍 위치가 모두 플레이어 블록으로 채워져 있는지도 확인 (정확한 매칭)
+                return playerGridPositions.size === holePositions.size;
+            }
+
+            function startGame(stageIndex) {
+                score = 0;
+                currentStage = stageIndex;
+                stageSelectScreen.classList.add('hidden');
+                hud.style.opacity = 1;
+                rotateButtonsContainer.style.opacity = 1;
+                loadStage(currentStage);
+                isPlaying = true;
+            }
+
+            function loadStage(stageIndex) {
+                if (player) scene.remove(player);
+                if (currentWall) scene.remove(currentWall);
+                if (ghostPlayer) scene.remove(ghostPlayer);
+
+                const config = stageConfig[stageIndex];
+                gameSpeed = config.speed;
+
+                console.log(`Stage ${stageIndex + 1}: Shape = ${config.shape}`);
+
+                player = createPlayerModel(config.shape);
+                player.position.z = 0;
+                scene.add(player);
+
+                camera.position.set(0, 5, 15);
+                camera.lookAt(0, 0, 0);
+
+                ghostPlayer = player.clone();
+                ghostPlayer.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.3 });
+                    }
+                });
+                scene.add(ghostPlayer);
+
+                currentWall = createWall(config.shape, config.holeRotation, config.holeOffset);
+                currentWall.position.z = -120;
+                scene.add(currentWall);
+
+                updateUI();
+                currentWall.state = 'ready';
+
+                setTimeout(() => {
+                    if (isPlaying) currentWall.state = 'moving';
+                }, 2500);
+            }
+
+            function nextStage() {
+                score += 100 * (currentStage + 1);
+                currentStage++;
+                showStageCleared(`STAGE ${currentStage + 1} CLEAR!`);
+                if (currentStage >= stageConfig.length) {
+                    winGame(); return;
+                }
+                setTimeout(() => { if (isPlaying) loadStage(currentStage); }, 2000);
+            }
+
+            function endGame(isWin = false) {
+                isPlaying = false;
+                if (ghostPlayer) ghostPlayer.visible = false;
+                if (player) player.visible = false;
+                if (currentWall) currentWall.visible = false;
+
+                if (isWin) winScreen.classList.remove('hidden');
+                else gameOverScreen.classList.remove('hidden');
+                hud.style.opacity = 0;
+                rotateButtonsContainer.style.opacity = 0;
+            }
+
+            function winGame() { endGame(true); }
+
+            function animate() {
+                const delta = clock.getDelta();
+
+                if (isPlaying) {
+                    if (currentWall && currentWall.state === 'moving') {
+                        currentWall.position.z += gameSpeed * delta;
+                    }
+
+                    if (ghostPlayer && currentWall) {
+                        ghostPlayer.position.x = player.position.x;
+                        ghostPlayer.position.y = player.position.y;
+                        ghostPlayer.position.z = currentWall.position.z;
+                        ghostPlayer.rotation.z = player.rotation.z;
+
+                        // 그림자가 구멍에 맞는지 확인하고 벽 색상 변경
+                        if (checkPlayerFitsHole(ghostPlayer, currentWall)) {
+                            // 벽을 초록색으로 변경
+                            currentWall.children.forEach(block => {
+                                block.material = currentWall.userData.greenMaterial;
+                            });
+                        } else {
+                            // 벽을 원래 색상으로 변경
+                            currentWall.children.forEach(block => {
+                                block.material = currentWall.userData.originalMaterial;
+                            });
+                        }
+                    }
+
+                    scene.updateMatrixWorld();
+
+                    if (currentWall) {
+                        const wallZ = currentWall.position.z;
+                        if (wallZ < player.position.z + 1.5 && wallZ > player.position.z - 1.5 && currentWall.state !== 'passed') {
+                            // 플레이어가 구멍에 맞는지 먼저 확인
+                            if (!checkPlayerFitsHole(player, currentWall) && isColliding(player, currentWall)) {
+                                endGame();
+                            }
+                        } else if (wallZ > camera.position.z && currentWall.state !== 'passed') {
+                            currentWall.state = 'passed';
+                            scene.remove(currentWall);
+                            nextStage();
+                        }
+                    }
+                }
+
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+            }
+
+            function updateUI() {
+                scoreDisplay.textContent = `SCORE: ${score}`;
+                stageDisplay.textContent = `STAGE: ${currentStage + 1}/${stageConfig.length}`;
+            }
+
+            function showStageCleared(text) {
+                stageClearedText.textContent = text;
+                stageClearedText.style.opacity = 1;
+                setTimeout(() => { stageClearedText.style.opacity = 0; }, 1500);
+            }
+
+            function createStageSelectButtons() {
+                for (let i = 0; i < stageConfig.length; i++) {
+                    const btn = document.createElement('button');
+                    btn.textContent = i + 1;
+                    btn.className = 'stage-btn';
+                    btn.addEventListener('click', () => startGame(i));
+                    stageGrid.appendChild(btn);
                 }
             }
 
-            renderer.render(scene, camera);
-            requestAnimationFrame(animate);
-        }
-        
-        function updateUI() {
-            scoreDisplay.textContent = `SCORE: ${score}`;
-            stageDisplay.textContent = `STAGE: ${currentStage + 1}/${stageConfig.length}`;
-        }
-
-        function showStageCleared(text) {
-            stageClearedText.textContent = text;
-            stageClearedText.style.opacity = 1;
-            setTimeout(() => { stageClearedText.style.opacity = 0; }, 1500);
-        }
-        
-        function createStageSelectButtons() {
-            for (let i = 0; i < stageConfig.length; i++) {
-                const btn = document.createElement('button');
-                btn.textContent = i + 1;
-                btn.className = 'stage-btn';
-                btn.addEventListener('click', () => startGame(i));
-                stageGrid.appendChild(btn);
+            function setupEventListeners() {
+                window.addEventListener('resize', onWindowResize);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('keydown', onKeyDown);
+                rotateLeftBtn.addEventListener('click', () => rotatePlayer(-1));
+                rotateRightBtn.addEventListener('click', () => rotatePlayer(1));
+                startButton.addEventListener('click', () => {
+                    startScreen.classList.add('hidden');
+                    stageSelectScreen.classList.remove('hidden');
+                });
+                backButton.addEventListener('click', () => {
+                    stageSelectScreen.classList.add('hidden');
+                    startScreen.classList.remove('hidden');
+                });
+                restartButtons.forEach(btn => btn.addEventListener('click', () => {
+                    gameOverScreen.classList.add('hidden');
+                    winScreen.classList.add('hidden');
+                    stageSelectScreen.classList.remove('hidden');
+                }));
             }
-        }
 
-        function setupEventListeners() {
-            window.addEventListener('resize', onWindowResize);
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('touchmove', onTouchMove, { passive: false });
-            document.addEventListener('keydown', onKeyDown);
-            rotateLeftBtn.addEventListener('click', () => rotatePlayer(-1));
-            rotateRightBtn.addEventListener('click', () => rotatePlayer(1));
-            startButton.addEventListener('click', () => {
-                startScreen.classList.add('hidden');
-                stageSelectScreen.classList.remove('hidden');
-            });
-            backButton.addEventListener('click', () => {
-                stageSelectScreen.classList.add('hidden');
-                startScreen.classList.remove('hidden');
-            });
-            restartButtons.forEach(btn => btn.addEventListener('click', () => {
-                gameOverScreen.classList.add('hidden');
-                winScreen.classList.add('hidden');
-                stageSelectScreen.classList.remove('hidden');
-            }));
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        function movePlayer(clientX, clientY) {
-            if(!isPlaying) return;
-            const rect = renderer.domElement.getBoundingClientRect();
-            const targetX = ((clientX - rect.left) / rect.width) * 2 - 1;
-            const targetY = -((clientY - rect.top) / rect.height) * 2 + 1;
-            player.position.x = THREE.MathUtils.lerp(player.position.x, targetX * MOVE_AREA_RADIUS, 0.1);
-            player.position.y = THREE.MathUtils.lerp(player.position.y, targetY * MOVE_AREA_RADIUS, 0.1);
-        }
-        function rotatePlayer(direction) {
-            if(!isPlaying) return;
-            player.rotation.z += (Math.PI / 2) * direction;
-        }
-        function onMouseMove(event) { if(isPlaying) movePlayer(event.clientX, event.clientY); }
-        function onTouchMove(event) {
-            event.preventDefault();
-            if (isPlaying && event.touches.length > 0) {
-                movePlayer(event.touches[0].clientX, event.touches[0].clientY);
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             }
-        }
-        function onKeyDown(event) {
-            if(!isPlaying) return;
-            const moveStep = 1.0;
-            if(event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') player.position.x = Math.max(-MOVE_AREA_RADIUS, player.position.x - moveStep);
-            if(event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') player.position.x = Math.min(MOVE_AREA_RADIUS, player.position.x + moveStep);
-            if(event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') player.position.y = Math.min(MOVE_AREA_RADIUS, player.position.y + moveStep);
-            if(event.key === 'ArrowDown' || event.key.toLowerCase() === 's') player.position.y = Math.max(-MOVE_AREA_RADIUS, player.position.y - moveStep);
-            if(event.key.toLowerCase() === 'q') rotatePlayer(-1);
-            if(event.key.toLowerCase() === 'e') rotatePlayer(1);
-        }
+            function movePlayer(clientX, clientY) {
+                if (!isPlaying) return;
+                const rect = renderer.domElement.getBoundingClientRect();
+                const targetX = ((clientX - rect.left) / rect.width) * 2 - 1;
+                const targetY = -((clientY - rect.top) / rect.height) * 2 + 1;
+                player.position.x = THREE.MathUtils.lerp(player.position.x, targetX * MOVE_AREA_RADIUS, 0.1);
+                player.position.y = THREE.MathUtils.lerp(player.position.y, targetY * MOVE_AREA_RADIUS, 0.1);
+            }
+            function rotatePlayer(direction) {
+                if (!isPlaying) return;
+                player.rotation.z += (Math.PI / 2) * direction;
+            }
+            function onMouseMove(event) { if (isPlaying) movePlayer(event.clientX, event.clientY); }
+            function onTouchMove(event) {
+                event.preventDefault();
+                if (isPlaying && event.touches.length > 0) {
+                    movePlayer(event.touches[0].clientX, event.touches[0].clientY);
+                }
+            }
+            function onKeyDown(event) {
+                if (!isPlaying) return;
+                const moveStep = 1.0;
+                if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') player.position.x = Math.max(-MOVE_AREA_RADIUS, player.position.x - moveStep);
+                if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') player.position.x = Math.min(MOVE_AREA_RADIUS, player.position.x + moveStep);
+                if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') player.position.y = Math.min(MOVE_AREA_RADIUS, player.position.y + moveStep);
+                if (event.key === 'ArrowDown' || event.key.toLowerCase() === 's') player.position.y = Math.max(-MOVE_AREA_RADIUS, player.position.y - moveStep);
+                if (event.key.toLowerCase() === 'q') rotatePlayer(-1);
+                if (event.key.toLowerCase() === 'e') rotatePlayer(1);
+            }
 
-        init();
-    });
+            init();
+        });
     </script>
 </body>
-</html>
 
+</html>
