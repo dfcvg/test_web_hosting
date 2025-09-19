@@ -185,10 +185,17 @@
             color: #000;
         }
 
-        #back-button {
+        #back-button,
+        #mode-back-button {
             background-color: #888;
             color: #000;
             box-shadow: none;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 0;
         }
 
         @media (max-width: 768px) {
@@ -218,10 +225,20 @@
                 <p class="subtitle">다가오는 벽의 구멍에 맞춰<br>이동하고 회전하여 통과하세요!</p>
                 <button id="startButton" class="button">START</button>
             </div>
+            <div id="mode-select-screen" class="screen hidden">
+                <button id="mode-back-button" class="button">BACK</button>
+                <h2 class="title" style="font-size: 3em; margin-bottom: 30px; margin-top: 80px;">SELECT MODE</h2>
+                <button id="easy-mode-btn" class="button"
+                    style="margin: 20px; background-color: #00ff00; box-shadow: 0 0 15px #00ff00;">EASY MODE</button>
+                <p class="subtitle" style="font-size: 1em; margin: 10px;">한 번에 하나의 벽</p>
+                <button id="hard-mode-btn" class="button"
+                    style="margin: 20px; background-color: #ff0000; box-shadow: 0 0 15px #ff0000;">HARD MODE</button>
+                <p class="subtitle" style="font-size: 1em; margin: 10px;">연속으로 날아오는 여러 벽!</p>
+            </div>
             <div id="stage-select-screen" class="screen hidden">
-                <h2 class="title" style="font-size: 3em; margin-bottom: 20px;">SELECT STAGE</h2>
-                <div id="stage-select-grid"></div>
                 <button id="back-button" class="button">BACK</button>
+                <h2 class="title" style="font-size: 3em; margin-bottom: 20px; margin-top: 80px;">SELECT STAGE</h2>
+                <div id="stage-select-grid"></div>
             </div>
             <div id="gameover-screen" class="screen hidden">
                 <h1 class="title">GAME OVER</h1>
@@ -252,10 +269,14 @@
             const CUBE_SIZE = 1.5;
             // --- UI Elements ---
             const startScreen = document.getElementById('start-screen');
+            const modeSelectScreen = document.getElementById('mode-select-screen');
             const stageSelectScreen = document.getElementById('stage-select-screen');
             const gameOverScreen = document.getElementById('gameover-screen');
             const winScreen = document.getElementById('win-screen');
             const startButton = document.getElementById('startButton');
+            const easyModeBtn = document.getElementById('easy-mode-btn');
+            const hardModeBtn = document.getElementById('hard-mode-btn');
+            const modeBackButton = document.getElementById('mode-back-button');
             const restartButtons = document.querySelectorAll('#restartButton');
             const backButton = document.getElementById('back-button');
             const stageGrid = document.getElementById('stage-select-grid');
@@ -270,25 +291,28 @@
             // --- Game Variables ---
             let scene, camera, renderer, player, clock, currentWall, ghostPlayer;
             let gameSpeed, score = 0, isPlaying = false, currentStage = 0;
+            let gameMode = 'easy'; // 'easy' or 'hard'
+            let wallQueue = []; // 하드모드용 벽 큐
+            let nextWallTimer = 0; // 다음 벽까지의 시간
             const MOVE_AREA_RADIUS = 8;
 
             // 스테이지별 고정 설정 - 다중 구멍 시스템 (속도 25 이하로 제한)
             const stageConfig = [
-                // 기본 단일 구멍 스테이지들 (1-12)
-                { speed: 8, shape: 'L', holes: [{ shape: 'L', rotation: 0, offset: { x: 0, y: 0 } }] },
-                { speed: 9, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI / 2, offset: { x: 2, y: 1 } }] },
-                { speed: 10, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI, offset: { x: -1, y: 2 } }] },
-                { speed: 11, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI * 1.5, offset: { x: 1, y: -1 } }] },
+                // 기본 단일 구멍 스테이지들 (1-12) - 속도 10 이상으로 조정
+                { speed: 12, shape: 'L', holes: [{ shape: 'L', rotation: 0, offset: { x: 0, y: 0 } }] },
+                { speed: 13, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI / 2, offset: { x: 2, y: 1 } }] },
+                { speed: 14, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI, offset: { x: -1, y: 2 } }] },
+                { speed: 15, shape: 'L', holes: [{ shape: 'L', rotation: Math.PI * 1.5, offset: { x: 1, y: -1 } }] },
 
-                { speed: 12, shape: 'T', holes: [{ shape: 'T', rotation: 0, offset: { x: 0, y: 0 } }] },
-                { speed: 13, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI / 2, offset: { x: -2, y: 1 } }] },
-                { speed: 14, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI, offset: { x: 1, y: -2 } }] },
-                { speed: 15, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI * 1.5, offset: { x: 2, y: 2 } }] },
+                { speed: 16, shape: 'T', holes: [{ shape: 'T', rotation: 0, offset: { x: 0, y: 0 } }] },
+                { speed: 17, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI / 2, offset: { x: -2, y: 1 } }] },
+                { speed: 18, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI, offset: { x: 1, y: -2 } }] },
+                { speed: 19, shape: 'T', holes: [{ shape: 'T', rotation: Math.PI * 1.5, offset: { x: 2, y: 2 } }] },
 
-                { speed: 16, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: 0, y: 0 } }] },
-                { speed: 17, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: -1, y: 1 } }] },
-                { speed: 18, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: 2, y: -1 } }] },
-                { speed: 19, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: -2, y: 2 } }] },
+                { speed: 20, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: 0, y: 0 } }] },
+                { speed: 21, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: -1, y: 1 } }] },
+                { speed: 22, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: 2, y: -1 } }] },
+                { speed: 23, shape: 'O', holes: [{ shape: 'O', rotation: 0, offset: { x: -2, y: 2 } }] },
 
                 // 다중 구멍 스테이지들 (13-16) - 2개 구멍
                 {
@@ -336,29 +360,29 @@
             // 나머지 스테이지들을 복잡한 패턴으로 채우기 (속도 25 이하 유지)
             let currentSpeed = 15;
             const complexPatterns = [
-                // 4개 구멍 패턴들
+                // 4개 구멍 패턴들 - 각 패턴에서 플레이어 모양과 일치하는 구멍 보장
                 {
                     shape: 'L', holes: [
-                        { shape: 'L', rotation: 0, offset: { x: -4, y: 3 } },
-                        { shape: 'T', rotation: Math.PI / 2, offset: { x: 0, y: 3 } },
-                        { shape: 'O', rotation: 0, offset: { x: 4, y: 0 } },
+                        { shape: 'L', rotation: 0, offset: { x: 0, y: 0 } }, // 플레이어와 일치하는 구멍
+                        { shape: 'T', rotation: Math.PI / 2, offset: { x: -3, y: 2 } },
+                        { shape: 'O', rotation: 0, offset: { x: 3, y: -2 } },
                         { shape: 'L', rotation: Math.PI, offset: { x: -2, y: -3 } }
                     ]
                 },
                 {
                     shape: 'T', holes: [
-                        { shape: 'T', rotation: 0, offset: { x: 0, y: 4 } },
-                        { shape: 'L', rotation: Math.PI / 2, offset: { x: -4, y: 1 } },
-                        { shape: 'O', rotation: 0, offset: { x: 3, y: -1 } },
-                        { shape: 'T', rotation: Math.PI * 1.5, offset: { x: 1, y: -4 } }
+                        { shape: 'T', rotation: 0, offset: { x: 0, y: 0 } }, // 플레이어와 일치하는 구멍
+                        { shape: 'L', rotation: Math.PI / 2, offset: { x: -3, y: 2 } },
+                        { shape: 'O', rotation: 0, offset: { x: 3, y: -2 } },
+                        { shape: 'T', rotation: Math.PI * 1.5, offset: { x: 2, y: 3 } }
                     ]
                 },
                 {
                     shape: 'O', holes: [
-                        { shape: 'O', rotation: 0, offset: { x: -3, y: 3 } },
-                        { shape: 'L', rotation: 0, offset: { x: 3, y: 2 } },
-                        { shape: 'T', rotation: Math.PI, offset: { x: 0, y: -2 } },
-                        { shape: 'O', rotation: 0, offset: { x: -4, y: -3 } }
+                        { shape: 'O', rotation: 0, offset: { x: 0, y: 0 } }, // 플레이어와 일치하는 구멍
+                        { shape: 'L', rotation: 0, offset: { x: -3, y: 2 } },
+                        { shape: 'T', rotation: Math.PI, offset: { x: 3, y: -2 } },
+                        { shape: 'O', rotation: 0, offset: { x: -2, y: -3 } }
                     ]
                 }
             ];
@@ -366,21 +390,30 @@
             while (stageConfig.length < 50) {
                 const patternIndex = Math.max(0, stageConfig.length - 20);
                 const pattern = complexPatterns[patternIndex % complexPatterns.length];
+
+                // 플레이어 모양과 일치하는 구멍이 반드시 포함되도록 수정
                 const newHoles = pattern.holes.map(hole => ({
                     shape: hole.shape,
-                    rotation: hole.rotation + (Math.random() - 0.5) * Math.PI / 6, // 약간의 랜덤 회전
+                    rotation: hole.rotation + (Math.random() - 0.5) * Math.PI / 6,
                     offset: {
                         x: hole.offset.x + (Math.random() - 0.5) * 1.5,
                         y: hole.offset.y + (Math.random() - 0.5) * 1.5
                     }
                 }));
 
+                // 플레이어 모양과 일치하는 구멍이 있는지 확인
+                const hasMatchingHole = newHoles.some(hole => hole.shape === pattern.shape);
+                if (!hasMatchingHole) {
+                    // 일치하는 구멍이 없으면 첫 번째 구멍을 플레이어 모양으로 변경
+                    newHoles[0].shape = pattern.shape;
+                }
+
                 stageConfig.push({
-                    speed: Math.min(25, Math.round(currentSpeed)), // 최대 속도 25로 제한
+                    speed: Math.min(25, Math.round(currentSpeed)),
                     shape: pattern.shape,
                     holes: newHoles
                 });
-                currentSpeed += 0.5; // 속도 증가량을 줄임
+                currentSpeed += 0.5;
             }
 
             const shapes = {
@@ -497,6 +530,92 @@
                 return wallGroup;
             }
 
+            // 하드모드용 함수들
+            function createWallForHardMode(playerShape, holes, startZ) {
+                const wall = createWall(playerShape, holes);
+                wall.position.z = startZ;
+                wall.state = 'ready';
+                return wall;
+            }
+
+            function spawnNextWallInQueue() {
+                if (wallQueue.length === 0) return;
+
+                const wallData = wallQueue.shift();
+
+                // 안전장치: 플레이어 모양과 일치하는 구멍이 있는지 확인
+                const hasMatchingHole = wallData.holes.some(hole => hole.shape === wallData.playerShape);
+                if (!hasMatchingHole) {
+                    console.warn('spawnNextWallInQueue: No matching hole found! Adding one...');
+                    wallData.holes.push({
+                        shape: wallData.playerShape,
+                        rotation: 0,
+                        offset: { x: 0, y: 0 }
+                    });
+                }
+
+                const wall = createWallForHardMode(wallData.playerShape, wallData.holes, -200);
+                scene.add(wall);
+
+                // 현재 벽이 없으면 이 벽을 현재 벽으로 설정
+                if (!currentWall || currentWall.state === 'passed') {
+                    currentWall = wall;
+                    setTimeout(() => {
+                        if (isPlaying && wall.state === 'ready') wall.state = 'moving';
+                    }, 1000);
+                } else {
+                    // 기존 벽이 있으면 큐에 다시 추가 (나중에 처리)
+                    wallQueue.unshift(wallData);
+                }
+            }
+
+            function setupHardModeWalls(stageIndex) {
+                wallQueue = [];
+                const config = stageConfig[stageIndex];
+
+                // 하드모드에서는 3-5개의 벽을 연속으로 생성
+                const wallCount = Math.min(5, Math.max(3, Math.floor(stageIndex / 5) + 3));
+
+                for (let i = 0; i < wallCount; i++) {
+                    let wallHoles;
+
+                    if (i === 0) {
+                        // 첫 번째 벽은 항상 플레이어와 같은 모양의 구멍 포함
+                        wallHoles = config.holes;
+                    } else {
+                        // 나머지 벽들은 플레이어 모양과 일치하는 구멍을 반드시 포함하도록 생성
+                        const randomStageIndex = Math.floor(Math.random() * Math.min(stageConfig.length, stageIndex + 5));
+                        const randomConfig = stageConfig[randomStageIndex];
+
+                        // 랜덤 구멍들을 복사하되, 플레이어 모양과 일치하는 구멍이 없으면 추가
+                        wallHoles = [...randomConfig.holes];
+                        const hasMatchingHole = wallHoles.some(hole => hole.shape === config.shape);
+
+                        if (!hasMatchingHole) {
+                            // 플레이어 모양과 일치하는 구멍을 랜덤 위치에 추가
+                            const playerHole = {
+                                shape: config.shape,
+                                rotation: Math.floor(Math.random() * 4) * (Math.PI / 2),
+                                offset: {
+                                    x: (Math.random() - 0.5) * 6,
+                                    y: (Math.random() - 0.5) * 6
+                                }
+                            };
+                            wallHoles.push(playerHole);
+                        }
+                    }
+
+                    // 디버깅: 큐에 추가되는 벽 데이터 확인
+                    console.log(`Wall ${i + 1} - Player: ${config.shape}, Holes: ${wallHoles.map(h => h.shape).join(', ')}`);
+
+                    wallQueue.push({
+                        playerShape: config.shape, // 항상 현재 스테이지의 플레이어 모양 사용
+                        holes: wallHoles,
+                        speed: config.speed
+                    });
+                }
+            }
+
             function isColliding(playerObject, wallObject) {
                 const wallBlocks = wallObject.children;
                 for (const playerBlock of playerObject.children) {
@@ -559,14 +678,21 @@
             }
 
             function loadStage(stageIndex) {
+                // 기존 오브젝트들 제거
                 if (player) scene.remove(player);
                 if (currentWall) scene.remove(currentWall);
                 if (ghostPlayer) scene.remove(ghostPlayer);
 
+                // 하드모드에서 큐에 있는 벽들도 제거
+                wallQueue.forEach(wallData => {
+                    if (wallData.wall) scene.remove(wallData.wall);
+                });
+                wallQueue = [];
+
                 const config = stageConfig[stageIndex];
                 gameSpeed = config.speed;
 
-                console.log(`Stage ${stageIndex + 1}: Shape = ${config.shape}`);
+                console.log(`Stage ${stageIndex + 1}: Shape = ${config.shape}, Mode = ${gameMode}`);
 
                 player = createPlayerModel(config.shape);
                 player.position.z = 0;
@@ -583,16 +709,26 @@
                 });
                 scene.add(ghostPlayer);
 
-                currentWall = createWall(config.shape, config.holes);
-                currentWall.position.z = -200; // 더 멀리서 시작
-                scene.add(currentWall);
+                if (gameMode === 'easy') {
+                    // 이지모드: 기존과 동일
+                    currentWall = createWall(config.shape, config.holes);
+                    currentWall.position.z = -200;
+                    scene.add(currentWall);
+                    currentWall.state = 'ready';
+
+                    setTimeout(() => {
+                        if (isPlaying) currentWall.state = 'moving';
+                    }, 2500);
+                } else {
+                    // 하드모드: 여러 벽 설정
+                    setupHardModeWalls(stageIndex);
+                    nextWallTimer = 0;
+
+                    // 첫 번째 벽 즉시 생성
+                    spawnNextWallInQueue();
+                }
 
                 updateUI();
-                currentWall.state = 'ready';
-
-                setTimeout(() => {
-                    if (isPlaying) currentWall.state = 'moving';
-                }, 2500);
             }
 
             function nextStage() {
@@ -623,6 +759,17 @@
                 const delta = clock.getDelta();
 
                 if (isPlaying) {
+                    // 하드모드에서 다음 벽 타이머 처리
+                    if (gameMode === 'hard') {
+                        nextWallTimer += delta;
+
+                        // 현재 벽이 어느 정도 지나갔고, 큐에 벽이 남아있으면 다음 벽 생성
+                        if (currentWall && currentWall.position.z > -100 && wallQueue.length > 0 && nextWallTimer > 2) {
+                            spawnNextWallInQueue();
+                            nextWallTimer = 0;
+                        }
+                    }
+
                     if (currentWall && currentWall.state === 'moving') {
                         currentWall.position.z += gameSpeed * delta;
                     }
@@ -668,7 +815,37 @@
                         } else if (wallZ > camera.position.z && currentWall.state !== 'passed') {
                             currentWall.state = 'passed';
                             scene.remove(currentWall);
-                            nextStage();
+
+                            if (gameMode === 'hard' && wallQueue.length > 0) {
+                                // 하드모드에서 큐에 벽이 남아있으면 다음 벽으로 전환
+                                const nextWallData = wallQueue.shift();
+
+                                // 디버깅: 벽 데이터 확인
+                                console.log('Next wall data:', nextWallData);
+                                console.log('Player shape:', nextWallData.playerShape);
+                                console.log('Holes:', nextWallData.holes.map(h => h.shape));
+
+                                // 플레이어 모양과 일치하는 구멍이 있는지 확인
+                                const hasMatchingHole = nextWallData.holes.some(hole => hole.shape === nextWallData.playerShape);
+                                if (!hasMatchingHole) {
+                                    console.warn('No matching hole found! Adding one...');
+                                    // 일치하는 구멍 추가
+                                    nextWallData.holes.push({
+                                        shape: nextWallData.playerShape,
+                                        rotation: 0,
+                                        offset: { x: 0, y: 0 }
+                                    });
+                                }
+
+                                currentWall = createWallForHardMode(nextWallData.playerShape, nextWallData.holes, -200);
+                                scene.add(currentWall);
+                                setTimeout(() => {
+                                    if (isPlaying && currentWall.state === 'ready') currentWall.state = 'moving';
+                                }, 1000);
+                            } else if (gameMode === 'easy' || wallQueue.length === 0) {
+                                // 이지모드이거나 하드모드에서 모든 벽을 통과했으면 다음 스테이지
+                                nextStage();
+                            }
                         }
                     }
                 }
@@ -679,7 +856,8 @@
 
             function updateUI() {
                 scoreDisplay.textContent = `SCORE: ${score}`;
-                stageDisplay.textContent = `STAGE: ${currentStage + 1}/${stageConfig.length}`;
+                const modeText = gameMode === 'hard' ? ' (HARD)' : ' (EASY)';
+                stageDisplay.textContent = `STAGE: ${currentStage + 1}/${stageConfig.length}${modeText}`;
             }
 
             function showStageCleared(text) {
@@ -707,16 +885,35 @@
                 rotateRightBtn.addEventListener('click', () => rotatePlayer(1));
                 startButton.addEventListener('click', () => {
                     startScreen.classList.add('hidden');
+                    modeSelectScreen.classList.remove('hidden');
+                });
+
+                easyModeBtn.addEventListener('click', () => {
+                    gameMode = 'easy';
+                    modeSelectScreen.classList.add('hidden');
                     stageSelectScreen.classList.remove('hidden');
                 });
-                backButton.addEventListener('click', () => {
-                    stageSelectScreen.classList.add('hidden');
+
+                hardModeBtn.addEventListener('click', () => {
+                    gameMode = 'hard';
+                    modeSelectScreen.classList.add('hidden');
+                    stageSelectScreen.classList.remove('hidden');
+                });
+
+                modeBackButton.addEventListener('click', () => {
+                    modeSelectScreen.classList.add('hidden');
                     startScreen.classList.remove('hidden');
                 });
+
+                backButton.addEventListener('click', () => {
+                    stageSelectScreen.classList.add('hidden');
+                    modeSelectScreen.classList.remove('hidden');
+                });
+
                 restartButtons.forEach(btn => btn.addEventListener('click', () => {
                     gameOverScreen.classList.add('hidden');
                     winScreen.classList.add('hidden');
-                    stageSelectScreen.classList.remove('hidden');
+                    modeSelectScreen.classList.remove('hidden');
                 }));
             }
 
