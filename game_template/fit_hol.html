@@ -117,12 +117,30 @@
             padding: 0 20px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 2em;
             color: #fff;
             text-shadow: 0 0 5px #fff, 0 0 10px #fff;
             opacity: 0;
             transition: opacity 0.5s;
         }
+
+        #game-back-button {
+            background-color: rgba(136, 136, 136, 0.8);
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 8px 16px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #game-back-button:hover {
+            background-color: rgba(136, 136, 136, 1);
+        }
+
+
 
         #stage-cleared-text {
             font-size: 3em;
@@ -198,6 +216,46 @@
             margin: 0;
         }
 
+        /* 동물 패턴 스타일 */
+        .wall-block {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wall-block::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            opacity: 0.3;
+        }
+
+        .wall-block.cat::before {
+            content: '🐱';
+        }
+
+        .wall-block.dog::before {
+            content: '🐶';
+        }
+
+        .wall-block.bear::before {
+            content: '🐻';
+        }
+
+        .wall-block.rabbit::before {
+            content: '🐰';
+        }
+
+        .wall-block.fox::before {
+            content: '🦊';
+        }
+
+        .wall-block.panda::before {
+            content: '🐼';
+        }
+
         @media (max-width: 768px) {
             .title {
                 font-size: 3em;
@@ -253,6 +311,7 @@
             <div id="stage-cleared-text"></div>
             <div id="hud">
                 <div id="score-display">SCORE: 0</div>
+                <button id="game-back-button">← BACK</button>
                 <div id="stage-display">STAGE: 1/50</div>
             </div>
         </div>
@@ -267,6 +326,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const CUBE_SIZE = 1.5;
+
+            // URL 파라미터 파싱
+            const urlParams = new URLSearchParams(window.location.search);
+            const useTexture = urlParams.get('texture') !== 'false'; // 기본값: true
+            const urlMode = urlParams.get('mode'); // 'easy' 또는 'hard'
+            const urlStage = parseInt(urlParams.get('stage')); // 스테이지 번호 (1-50)
+
+            console.log('URL Parameters:', { useTexture, urlMode, urlStage });
             // --- UI Elements ---
             const startScreen = document.getElementById('start-screen');
             const modeSelectScreen = document.getElementById('mode-select-screen');
@@ -287,6 +354,7 @@
             const rotateButtonsContainer = document.getElementById('rotate-buttons-container');
             const rotateLeftBtn = document.getElementById('rotate-left-btn');
             const rotateRightBtn = document.getElementById('rotate-right-btn');
+            const gameBackButton = document.getElementById('game-back-button');
 
             // --- Game Variables ---
             let scene, camera, renderer, player, clock, currentWall, ghostPlayer;
@@ -358,7 +426,7 @@
             ];
 
             // 나머지 스테이지들을 복잡한 패턴으로 채우기 (속도 25 이하 유지)
-            let currentSpeed = 15;
+            let currentSpeed = 20;
             const complexPatterns = [
                 // 4개 구멍 패턴들 - 각 패턴에서 플레이어 모양과 일치하는 구멍 보장
                 {
@@ -474,9 +542,108 @@
                 return playerGroup;
             }
 
-            function createWall(playerShape, holes) {
+            // 동물 텍스처 생성 함수
+            function createAnimalTexture(animal) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+
+                // 배경색
+                ctx.fillStyle = '#ff00aa';
+                ctx.fillRect(0, 0, 64, 64);
+
+                // 동물 이모지
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(animal, 32, 32);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+
+            // 벽 전체에 동물 텍스처를 생성하는 함수
+            function createWallAnimalTexture(animal, wallSize) {
+                const canvas = document.createElement('canvas');
+                const canvasSize = 512;
+                canvas.width = canvasSize;
+                canvas.height = canvasSize;
+                const ctx = canvas.getContext('2d');
+
+                // 배경색
+                ctx.fillStyle = '#ff00aa';
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                // 중앙에 큰 동물 이모지
+                ctx.font = `${canvasSize * 0.6}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(animal, canvasSize / 2, canvasSize / 2);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                texture.repeat.set(1, 1);
+                return texture;
+            }
+
+            function createWall(playerShape, holes, enableTexture = true) {
                 const wallGroup = new THREE.Group();
-                const mat = new THREE.MeshPhongMaterial({ color: 0xff00aa, emissive: 0xff00aa, emissiveIntensity: 0.3 });
+
+                let mat, greenMat, redMat;
+                let randomAnimal = '';
+                const wallSize = 15;
+
+                if (enableTexture) {
+                    // 동물 패턴 배열
+                    const animals = ['🐱', '🐶', '🐻', '🐰', '🦊', '🐼', '🐸', '🐵', '🦁', '🐯'];
+                    randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+
+                    const animalTexture = createWallAnimalTexture(randomAnimal, wallSize);
+                    const greenTexture = createWallAnimalTexture(randomAnimal, wallSize);
+                    const redTexture = createWallAnimalTexture(randomAnimal, wallSize);
+
+                    mat = new THREE.MeshPhongMaterial({
+                        color: 0xff00aa,
+                        emissive: 0xff00aa,
+                        emissiveIntensity: 0.3,
+                        map: animalTexture
+                    });
+
+                    greenMat = new THREE.MeshPhongMaterial({
+                        color: 0x00ff00,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.3,
+                        map: greenTexture
+                    });
+
+                    redMat = new THREE.MeshPhongMaterial({
+                        color: 0xff0000,
+                        emissive: 0xff0000,
+                        emissiveIntensity: 0.3,
+                        map: redTexture
+                    });
+                } else {
+                    // 텍스처 없는 단순한 색상만
+                    mat = new THREE.MeshPhongMaterial({
+                        color: 0xff00aa,
+                        emissive: 0xff00aa,
+                        emissiveIntensity: 0.3
+                    });
+
+                    greenMat = new THREE.MeshPhongMaterial({
+                        color: 0x00ff00,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.3
+                    });
+
+                    redMat = new THREE.MeshPhongMaterial({
+                        color: 0xff0000,
+                        emissive: 0xff0000,
+                        emissiveIntensity: 0.3
+                    });
+                }
 
                 // 모든 구멍 위치를 계산
                 const allHolePositions = new Set();
@@ -504,24 +671,50 @@
                     });
                 });
 
+                // 색상 변경용 텍스처들 생성
+                const greenTexture = createWallAnimalTexture(randomAnimal, wallSize);
+                const redTexture = createWallAnimalTexture(randomAnimal, wallSize);
+
                 // 벽 정보 저장
                 wallGroup.userData = {
                     allHolePositions: allHolePositions,
                     correctHolePositions: correctHolePositions,
                     holes: holes,
                     playerShape: playerShape,
+                    animal: randomAnimal,
                     originalMaterial: mat,
-                    greenMaterial: new THREE.MeshPhongMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.3 }),
-                    redMaterial: new THREE.MeshPhongMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3 })
+                    greenMaterial: greenMat,
+                    redMaterial: redMat
                 };
 
-                const wallSize = 15;
                 for (let x = -wallSize; x <= wallSize; x++) {
                     for (let y = -wallSize; y <= wallSize; y++) {
                         if (!allHolePositions.has(`${x},${y}`)) {
                             const blockGeo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, 2);
                             const blockMesh = new THREE.Mesh(blockGeo, mat);
                             blockMesh.position.set(x * CUBE_SIZE, y * CUBE_SIZE, 0);
+
+                            // 텍스처 사용 시에만 UV 좌표 설정
+                            if (enableTexture) {
+                                const uvAttribute = blockMesh.geometry.attributes.uv;
+                                const uvArray = uvAttribute.array;
+
+                                // 블록의 전체 벽에서의 상대적 위치 계산
+                                const uStart = (x + wallSize) / (wallSize * 2);
+                                const vStart = (y + wallSize) / (wallSize * 2);
+                                const uSize = 1 / (wallSize * 2);
+                                const vSize = 1 / (wallSize * 2);
+
+                                // UV 좌표 업데이트 (앞면과 뒷면)
+                                for (let i = 0; i < uvArray.length; i += 2) {
+                                    const u = uvArray[i];
+                                    const v = uvArray[i + 1];
+                                    uvArray[i] = uStart + u * uSize;
+                                    uvArray[i + 1] = vStart + v * vSize;
+                                }
+
+                                uvAttribute.needsUpdate = true;
+                            }
                             wallGroup.add(blockMesh);
                         }
                     }
@@ -532,7 +725,7 @@
 
             // 하드모드용 함수들
             function createWallForHardMode(playerShape, holes, startZ) {
-                const wall = createWall(playerShape, holes);
+                const wall = createWall(playerShape, holes, useTexture);
                 wall.position.z = startZ;
                 wall.state = 'ready';
                 return wall;
@@ -711,7 +904,7 @@
 
                 if (gameMode === 'easy') {
                     // 이지모드: 기존과 동일
-                    currentWall = createWall(config.shape, config.holes);
+                    currentWall = createWall(config.shape, config.holes, useTexture);
                     currentWall.position.z = -200;
                     scene.add(currentWall);
                     currentWall.state = 'ready';
@@ -850,6 +1043,7 @@
                     }
                 }
 
+                // 동물 오버레이 업데이트
                 renderer.render(scene, camera);
                 requestAnimationFrame(animate);
             }
@@ -859,6 +1053,8 @@
                 const modeText = gameMode === 'hard' ? ' (HARD)' : ' (EASY)';
                 stageDisplay.textContent = `STAGE: ${currentStage + 1}/${stageConfig.length}${modeText}`;
             }
+
+
 
             function showStageCleared(text) {
                 stageClearedText.textContent = text;
@@ -910,6 +1106,22 @@
                     modeSelectScreen.classList.remove('hidden');
                 });
 
+                gameBackButton.addEventListener('click', () => {
+                    // 게임 중단하고 모드 선택으로 돌아가기
+                    isPlaying = false;
+                    if (currentWall) scene.remove(currentWall);
+                    if (player) scene.remove(player);
+                    if (ghostPlayer) scene.remove(ghostPlayer);
+                    wallQueue.forEach(wallData => {
+                        if (wallData.wall) scene.remove(wallData.wall);
+                    });
+                    wallQueue = [];
+
+                    hud.style.opacity = 0;
+                    rotateButtonsContainer.style.opacity = 0;
+                    modeSelectScreen.classList.remove('hidden');
+                });
+
                 restartButtons.forEach(btn => btn.addEventListener('click', () => {
                     gameOverScreen.classList.add('hidden');
                     winScreen.classList.add('hidden');
@@ -953,6 +1165,22 @@
             }
 
             init();
+
+            // URL 파라미터에 따른 자동 시작
+            if (urlMode && urlStage && urlStage >= 1 && urlStage <= 50) {
+                // 모드와 스테이지가 지정된 경우 자동으로 게임 시작
+                gameMode = urlMode;
+                setTimeout(() => {
+                    startGame(urlStage - 1); // 스테이지는 0부터 시작하므로 -1
+                }, 1000);
+            } else if (urlMode) {
+                // 모드만 지정된 경우 스테이지 선택 화면으로
+                gameMode = urlMode;
+                setTimeout(() => {
+                    startScreen.classList.add('hidden');
+                    stageSelectScreen.classList.remove('hidden');
+                }, 500);
+            }
         });
     </script>
 </body>
