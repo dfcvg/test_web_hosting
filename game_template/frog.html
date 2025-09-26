@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>개구리 점프 (Frog Jump)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to top, #6dd5ed, #2193b0);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: opacity 0.5s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 400px; /* Mobile-friendly width */
+            height: 100%;
+            max-height: 800px;
+            background: #5c9bde; /* Water background */
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #uiContainer {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        /* Screens Styling */
+        #startScreen {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            z-index: 100;
+        }
+        #gameOverScreen {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            z-index: 99;
+        }
+        .visible {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        .screen h1 {
+            font-size: 60px;
+            margin-bottom: 40px;
+            color: #fff;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .screen h2 {
+            font-size: 48px;
+            margin: 0;
+        }
+        .screen p {
+            font-size: 24px;
+        }
+        .button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 20px;
+            color: #2193b0;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+            min-width: 200px;
+        }
+        .button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="uiContainer">
+            <div>점수: <span id="score">0</span></div>
+            <div>최고: <span id="highScore">0</span></div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="screen visible">
+            <h1>개구리 점프</h1>
+            <button id="infiniteModeBtn" class="button">무한 모드</button>
+            <button id="stageModeBtn" class="button">스테이지 모드</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen">
+            <h2>게임 오버</h2>
+            <p>최종 점수: <span id="finalScore">0</span></p>
+            <button id="restartBtn" class="button">다시 시작</button>
+            <button id="mainMenuBtn" class="button">메인 메뉴</button>
+        </div>
+    </div>
+
+    <script>
+        class FrogJump {
+            constructor(mode) {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.container = document.getElementById('gameContainer');
+                
+                this.canvas.width = this.container.clientWidth;
+                this.canvas.height = this.container.clientHeight;
+
+                this.mode = mode; // 'infinite' or 'stage'
+                this.score = 0;
+                this.highScore = localStorage.getItem('frogJumpHighScore') || 0;
+                this.cameraY = 0;
+                this.isGameOver = false;
+
+                this.gravity = 0.5;
+
+                this.player = {
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height - 30 - 15,
+                    radius: 15,
+                    vx: 0,
+                    vy: 0,
+                    color: '#4cd137'
+                };
+
+                // Platforms & Items
+                this.platforms = [];
+                this.items = [];
+                this.platformWidth = 80;
+                this.platformHeight = 15;
+                this.platformCount = 10;
+                this.lastPlatformY = this.canvas.height - 30;
+
+                // Controls (Tongue)
+                this.isCharging = false;
+                this.chargeStart = { x: 0, y: 0 };
+                this.chargeEnd = { x: 0, y: 0 };
+                this.maxJumpForce = 15;
+
+                this.init();
+            }
+
+            init() {
+                this.setupPlatforms();
+                this.setupControls();
+                this.updateUI();
+                this.gameLoop();
+            }
+            
+            setupPlatforms() {
+                const initialWidth = this.mode === 'infinite' ? this.canvas.width - 40 : this.platformWidth;
+                const initialX = this.mode === 'infinite' ? 20 : this.canvas.width / 2 - this.platformWidth / 2;
+                this.platforms.push({ x: initialX, y: this.canvas.height - 30, width: initialWidth, height: this.platformHeight, type: 'normal' });
+                
+                if (this.mode === 'infinite') {
+                    for (let i = 1; i < this.platformCount * 2; i++) {
+                        this.generatePlatform();
+                    }
+                } else if (this.mode === 'stage') {
+                    this.loadStage(1);
+                }
+            }
+
+            loadStage(level) {
+                const stage1 = [
+                    { x: 150, y: 650, type: 'normal' }, 
+                    { x: 250, y: 550, type: 'moving' }, 
+                    { x: 100, y: 450, type: 'fragile' }, 
+                    { x: 200, y: 350, type: 'normal' }, 
+                    { x: 50, y: 250, type: 'moving' }, 
+                    { x: 150, y: 150, type: 'normal' },
+                    { x: 250, y: 50, type: 'goal' }
+                ];
+                stage1.forEach(p => {
+                    this.platforms.push({
+                        x: p.x, y: p.y, width: this.platformWidth, height: this.platformHeight, type: p.type,
+                        dir: 1, speed: 1, item: p.item || null
+                    });
+                });
+            }
+
+            generatePlatform() {
+                const y = this.lastPlatformY - (80 + Math.random() * 40);
+                const x = Math.random() * (this.canvas.width - this.platformWidth);
+                let type = 'normal';
+                let item = null;
+
+                const rand = Math.random();
+                if (rand > 0.85) type = 'moving'; // Log
+                else if (rand > 0.7) type = 'fragile'; // Turtle
+                
+                if(Math.random() > 0.9) item = 'fly'; // Fly item
+
+                this.platforms.push({ x: x, y: y, width: this.platformWidth, height: this.platformHeight, type: type, dir: 1, speed: Math.random() * 1 + 0.5, item: item });
+                this.lastPlatformY = y;
+            }
+
+            setupControls() {
+                this.startCharge = this.startCharge.bind(this);
+                this.moveCharge = this.moveCharge.bind(this);
+                this.endCharge = this.endCharge.bind(this);
+
+                this.canvas.addEventListener('mousedown', this.startCharge);
+                this.canvas.addEventListener('mousemove', this.moveCharge);
+                this.canvas.addEventListener('mouseup', this.endCharge);
+                this.canvas.addEventListener('touchstart', this.startCharge, { passive: false });
+                this.canvas.addEventListener('touchmove', this.moveCharge, { passive: false });
+                this.canvas.addEventListener('touchend', this.endCharge);
+            }
+            
+            getEventCoords(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const touch = e.touches ? e.touches[0] : e;
+                return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+            }
+
+            startCharge(e) {
+                if (this.isGameOver) return;
+                const coords = this.getEventCoords(e);
+                this.isCharging = true;
+                this.chargeStart.x = coords.x;
+                this.chargeStart.y = coords.y;
+                this.chargeEnd.x = coords.x;
+                this.chargeEnd.y = coords.y;
+            }
+            
+            moveCharge(e) {
+                if (!this.isCharging || this.isGameOver) return;
+                e.preventDefault();
+                const coords = this.getEventCoords(e);
+                this.chargeEnd.x = coords.x;
+                this.chargeEnd.y = coords.y;
+            }
+
+            endCharge() {
+                if (!this.isCharging || this.isGameOver) return;
+                this.isCharging = false;
+                
+                const dx = this.chargeStart.x - this.chargeEnd.x;
+                const dy = this.chargeStart.y - this.chargeEnd.y;
+                
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 10) return;
+                const force = Math.min(distance / 8, this.maxJumpForce);
+
+                this.player.vx = (dx / distance) * force * 0.7;
+                this.player.vy = (dy / distance) * force;
+            }
+            
+            update() {
+                if (this.isGameOver) return;
+                this.player.vy += this.gravity;
+                this.player.y += this.player.vy;
+                this.player.x += this.player.vx;
+                this.player.vx *= 0.95;
+
+                if (this.player.x + this.player.radius < 0) this.player.x = this.canvas.width + this.player.radius;
+                if (this.player.x - this.player.radius > this.canvas.width) this.player.x = -this.player.radius;
+
+                if (this.player.y < this.cameraY + this.canvas.height / 2) {
+                    this.cameraY = this.player.y - this.canvas.height / 2;
+                }
+
+                this.platforms.forEach((p, index) => {
+                    if (p.type === 'moving') {
+                        p.x += p.speed * p.dir;
+                        if (p.x <= 0 || p.x + p.width >= this.canvas.width) {
+                            p.dir *= -1;
+                        }
+                    }
+
+                    if (this.player.vy > 0 && 
+                        this.player.x > p.x && 
+                        this.player.x < p.x + p.width && 
+                        this.player.y + this.player.radius > p.y && 
+                        this.player.y - this.player.radius < p.y + p.height) 
+                    {
+                        if (p.type === 'goal') {
+                            return this.winGame();
+                        }
+                        
+                        this.player.vy = p.item === 'fly' ? -25 : -12;
+
+                        if (p.type === 'fragile') {
+                            this.platforms.splice(index, 1);
+                        }
+                         if(p.item) p.item = null;
+                    }
+                });
+                
+                if (this.mode === 'infinite') {
+                    while (this.lastPlatformY > this.cameraY - this.canvas.height) {
+                        this.generatePlatform();
+                    }
+                    this.platforms = this.platforms.filter(p => p.y < this.cameraY + this.canvas.height + 100);
+                }
+                
+                this.score = Math.max(this.score, Math.floor(-this.cameraY / 10));
+                
+                if (this.player.y > this.cameraY + this.canvas.height + 50) {
+                    this.gameOver();
+                }
+            }
+
+            // --- THEME CHANGE: All rendering functions updated ---
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                this.ctx.translate(0, -this.cameraY);
+
+                // Draw platforms with new theme
+                this.platforms.forEach(p => {
+                    this.drawPlatform(p);
+                    if (p.item === 'fly') {
+                        this.drawFly(p.x + p.width / 2, p.y - 15);
+                    }
+                });
+
+                // Draw player (frog)
+                this.drawFrog();
+                
+                this.ctx.restore();
+
+                // Draw controls (tongue)
+                if (this.isCharging) {
+                    this.drawTongue();
+                }
+            }
+
+            drawPlatform(p) {
+                switch(p.type) {
+                    case 'moving': // Log
+                        this.ctx.fillStyle = '#8B4513';
+                        this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        this.ctx.fillStyle = '#654321';
+                        this.ctx.fillRect(p.x + 5, p.y + 5, p.width - 10, p.height - 10);
+                        break;
+                    case 'fragile': // Turtle
+                        this.ctx.fillStyle = '#006400'; // Dark green shell
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height * 0.8, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.fillStyle = '#556B2F'; // Head
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x + p.width + 5, p.y + p.height/2, 8, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    case 'goal': // Lily pad with flower
+                        this.ctx.fillStyle = '#2E8B57'; // Lily pad
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height / 2, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.fillStyle = 'pink'; // Flower
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x + p.width/2, p.y + p.height/2, 8, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.fillStyle = 'yellow';
+                        this.ctx.beginPath();
+                        this.ctx.arc(p.x + p.width/2, p.y + p.height/2, 3, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                    default: // Normal lily pad
+                        this.ctx.fillStyle = '#2E8B57';
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height / 2, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        break;
+                }
+            }
+
+            drawFrog() {
+                const p = this.player;
+                // Body
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Eyes
+                this.ctx.fillStyle = 'white';
+                this.ctx.beginPath();
+                this.ctx.arc(p.x - p.radius/2, p.y - p.radius/2, p.radius/3, 0, Math.PI * 2);
+                this.ctx.arc(p.x + p.radius/2, p.y - p.radius/2, p.radius/3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = 'black';
+                this.ctx.beginPath();
+                this.ctx.arc(p.x - p.radius/2, p.y - p.radius/2, p.radius/6, 0, Math.PI * 2);
+                this.ctx.arc(p.x + p.radius/2, p.y - p.radius/2, p.radius/6, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            drawFly(x, y) {
+                // Body
+                this.ctx.fillStyle = 'black';
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+                // Wings
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(x-5, y-3, 5, 2, -Math.PI/4, 0, Math.PI * 2);
+                this.ctx.ellipse(x+5, y-3, 5, 2, Math.PI/4, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            drawTongue() {
+                this.ctx.save();
+                const playerScreenX = this.player.x;
+                const playerScreenY = this.player.y - this.cameraY;
+
+                const launchDx = this.chargeStart.x - this.chargeEnd.x;
+                const launchDy = this.chargeStart.y - this.chargeEnd.y;
+                
+                const startLineX = playerScreenX;
+                const startLineY = playerScreenY;
+                
+                const endLineX = this.chargeEnd.x;
+                const endLineY = this.chargeEnd.y;
+
+                // Tongue line
+                this.ctx.strokeStyle = '#ff82ab';
+                this.ctx.lineWidth = 5;
+                this.ctx.lineCap = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(startLineX, startLineY);
+                this.ctx.lineTo(endLineX, endLineY);
+                this.ctx.stroke();
+
+                // Tongue tip
+                this.ctx.fillStyle = '#ff82ab';
+                this.ctx.beginPath();
+                this.ctx.arc(endLineX, endLineY, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.restore();
+            }
+            // --- END THEME CHANGE ---
+            
+            gameLoop() {
+                this.update();
+                this.render();
+                this.updateUI();
+                if (!this.stopLoop) requestAnimationFrame(() => this.gameLoop());
+            }
+
+            updateUI() {
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('highScore').textContent = this.highScore;
+            }
+            
+            gameOver() {
+                this.isGameOver = true;
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('frogJumpHighScore', this.highScore);
+                }
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('gameOverScreen').classList.add('visible');
+            }
+
+            winGame() {
+                this.isGameOver = true;
+                const gameOverScreen = document.getElementById('gameOverScreen');
+                gameOverScreen.querySelector('h2').textContent = "스테이지 클리어!";
+                this.score += 1000; // Bonus for winning
+                document.getElementById('finalScore').textContent = this.score;
+                gameOverScreen.classList.add('visible');
+            }
+            
+            destroy() {
+                this.stopLoop = true;
+                this.canvas.removeEventListener('mousedown', this.startCharge);
+                this.canvas.removeEventListener('mousemove', this.moveCharge);
+                this.canvas.removeEventListener('mouseup', this.endCharge);
+                this.canvas.removeEventListener('touchstart', this.startCharge);
+                this.canvas.removeEventListener('touchmove', this.moveCharge);
+                this.canvas.removeEventListener('touchend', this.endCharge);
+            }
+        }
+
+        // Game Manager
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const infiniteModeBtn = document.getElementById('infiniteModeBtn');
+        const stageModeBtn = document.getElementById('stageModeBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const mainMenuBtn = document.getElementById('mainMenuBtn');
+
+        let currentGame = null;
+        let currentMode = 'infinite';
+
+        function startGame(mode) {
+            currentMode = mode;
+            startScreen.classList.remove('visible');
+            gameOverScreen.classList.remove('visible');
+            if (currentGame) currentGame.destroy();
+            currentGame = new FrogJump(mode);
+        }
+
+        function showMainMenu() {
+            if (currentGame) currentGame.destroy();
+            currentGame = null;
+            gameOverScreen.classList.remove('visible');
+            startScreen.classList.add('visible');
+            gameOverScreen.querySelector('h2').textContent = "게임 오버";
+        }
+
+        infiniteModeBtn.addEventListener('click', () => startGame('infinite'));
+        stageModeBtn.addEventListener('click', () => startGame('stage'));
+        restartBtn.addEventListener('click', () => startGame(currentMode));
+        mainMenuBtn.addEventListener('click', showMainMenu);
+
+        window.addEventListener('resize', () => {
+             if(currentGame) {
+                currentGame.destroy();
+                currentGame = null;
+             }
+             startGame(currentMode);
+        });
+    </script>
+</body>
+</html>
+
