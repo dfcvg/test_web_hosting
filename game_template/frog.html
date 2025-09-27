@@ -8,7 +8,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(to top, #6dd5ed, #2193b0);
+            background: #333;
             font-family: 'Arial', sans-serif;
             overflow: hidden;
             touch-action: none;
@@ -39,7 +39,7 @@
             max-width: 400px; /* Mobile-friendly width */
             height: 100%;
             max-height: 800px;
-            background: #5c9bde; /* Water background */
+            background: #5c9bde; /* Default Water background */
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             overflow: hidden;
@@ -57,18 +57,13 @@
             display: flex;
             justify-content: space-around;
             color: white;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             pointer-events: none;
             z-index: 10;
             text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
         }
         /* Screens Styling */
-        #startScreen {
-            background: rgba(0,0,0,0.7);
-            color: white;
-            z-index: 100;
-        }
         #gameOverScreen {
             background: rgba(0,0,0,0.7);
             color: white;
@@ -77,12 +72,6 @@
         .visible {
             opacity: 1 !important;
             pointer-events: auto !important;
-        }
-        .screen h1 {
-            font-size: 60px;
-            margin-bottom: 40px;
-            color: #fff;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
         .screen h2 {
             font-size: 48px;
@@ -113,29 +102,22 @@
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         <div id="uiContainer">
-            <div>점수: <span id="score">0</span></div>
-            <div>최고: <span id="highScore">0</span></div>
-        </div>
-
-        <!-- Start Screen -->
-        <div id="startScreen" class="screen visible">
-            <h1>개구리 점프</h1>
-            <button id="infiniteModeBtn" class="button">무한 모드</button>
-            <button id="stageModeBtn" class="button">스테이지 모드</button>
+            <div>높이: <span id="height">0</span>m</div>
+            <div>코인: <span id="coins">0</span></div>
+            <div>최고: <span id="highScore">0</span>m</div>
         </div>
 
         <!-- Game Over Screen -->
         <div id="gameOverScreen" class="screen">
             <h2>게임 오버</h2>
-            <p>최종 점수: <span id="finalScore">0</span></p>
+            <p>최종 높이: <span id="finalScore">0</span>m</p>
             <button id="restartBtn" class="button">다시 시작</button>
-            <button id="mainMenuBtn" class="button">메인 메뉴</button>
         </div>
     </div>
 
     <script>
         class FrogJump {
-            constructor(mode) {
+            constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
                 this.container = document.getElementById('gameContainer');
@@ -143,11 +125,12 @@
                 this.canvas.width = this.container.clientWidth;
                 this.canvas.height = this.container.clientHeight;
 
-                this.mode = mode; // 'infinite' or 'stage'
-                this.score = 0;
+                this.score = 0; // Represents height in meters
+                this.coins = parseInt(localStorage.getItem('frogJumpCoins')) || 0;
                 this.highScore = localStorage.getItem('frogJumpHighScore') || 0;
                 this.cameraY = 0;
                 this.isGameOver = false;
+                this.zone = 'pond'; // pond, ice, lava
 
                 this.gravity = 0.5;
 
@@ -162,10 +145,8 @@
 
                 // Platforms & Items
                 this.platforms = [];
-                this.items = [];
                 this.platformWidth = 80;
                 this.platformHeight = 15;
-                this.platformCount = 10;
                 this.lastPlatformY = this.canvas.height - 30;
 
                 // Controls (Tongue)
@@ -185,35 +166,10 @@
             }
             
             setupPlatforms() {
-                const initialWidth = this.mode === 'infinite' ? this.canvas.width - 40 : this.platformWidth;
-                const initialX = this.mode === 'infinite' ? 20 : this.canvas.width / 2 - this.platformWidth / 2;
-                this.platforms.push({ x: initialX, y: this.canvas.height - 30, width: initialWidth, height: this.platformHeight, type: 'normal' });
-                
-                if (this.mode === 'infinite') {
-                    for (let i = 1; i < this.platformCount * 2; i++) {
-                        this.generatePlatform();
-                    }
-                } else if (this.mode === 'stage') {
-                    this.loadStage(1);
+                this.platforms.push({ x: 20, y: this.canvas.height - 30, width: this.canvas.width - 40, height: this.platformHeight, type: 'normal' });
+                for (let i = 1; i < 20; i++) {
+                    this.generatePlatform();
                 }
-            }
-
-            loadStage(level) {
-                const stage1 = [
-                    { x: 150, y: 650, type: 'normal' }, 
-                    { x: 250, y: 550, type: 'moving' }, 
-                    { x: 100, y: 450, type: 'fragile' }, 
-                    { x: 200, y: 350, type: 'normal' }, 
-                    { x: 50, y: 250, type: 'moving' }, 
-                    { x: 150, y: 150, type: 'normal' },
-                    { x: 250, y: 50, type: 'goal' }
-                ];
-                stage1.forEach(p => {
-                    this.platforms.push({
-                        x: p.x, y: p.y, width: this.platformWidth, height: this.platformHeight, type: p.type,
-                        dir: 1, speed: 1, item: p.item || null
-                    });
-                });
             }
 
             generatePlatform() {
@@ -221,14 +177,16 @@
                 const x = Math.random() * (this.canvas.width - this.platformWidth);
                 let type = 'normal';
                 let item = null;
+                let hasCoin = false;
 
                 const rand = Math.random();
-                if (rand > 0.85) type = 'moving'; // Log
-                else if (rand > 0.7) type = 'fragile'; // Turtle
+                if (rand > 0.85) type = 'moving';
+                else if (rand > 0.7) type = 'fragile';
                 
-                if(Math.random() > 0.9) item = 'fly'; // Fly item
+                if (Math.random() > 0.9) item = 'fly';
+                if (Math.random() > 0.7) hasCoin = true;
 
-                this.platforms.push({ x: x, y: y, width: this.platformWidth, height: this.platformHeight, type: type, dir: 1, speed: Math.random() * 1 + 0.5, item: item });
+                this.platforms.push({ x: x, y: y, width: this.platformWidth, height: this.platformHeight, type: type, dir: 1, speed: Math.random() * 1 + 0.5, item: item, coin: hasCoin });
                 this.lastPlatformY = y;
             }
 
@@ -313,12 +271,12 @@
                         this.player.y + this.player.radius > p.y && 
                         this.player.y - this.player.radius < p.y + p.height) 
                     {
-                        if (p.type === 'goal') {
-                            return this.winGame();
-                        }
-                        
                         this.player.vy = p.item === 'fly' ? -25 : -12;
 
+                        if (p.coin) {
+                            this.coins++;
+                            p.coin = false;
+                        }
                         if (p.type === 'fragile') {
                             this.platforms.splice(index, 1);
                         }
@@ -326,154 +284,163 @@
                     }
                 });
                 
-                if (this.mode === 'infinite') {
-                    while (this.lastPlatformY > this.cameraY - this.canvas.height) {
-                        this.generatePlatform();
-                    }
-                    this.platforms = this.platforms.filter(p => p.y < this.cameraY + this.canvas.height + 100);
+                while (this.lastPlatformY > this.cameraY - this.canvas.height) {
+                    this.generatePlatform();
                 }
+                this.platforms = this.platforms.filter(p => p.y < this.cameraY + this.canvas.height + 100);
                 
                 this.score = Math.max(this.score, Math.floor(-this.cameraY / 10));
+
+                this.updateZone();
                 
                 if (this.player.y > this.cameraY + this.canvas.height + 50) {
                     this.gameOver();
                 }
             }
 
-            // --- THEME CHANGE: All rendering functions updated ---
+            updateZone() {
+                if (this.score > 2000) {
+                    this.zone = 'lava';
+                } else if (this.score > 1000) {
+                    this.zone = 'ice';
+                } else {
+                    this.zone = 'pond';
+                }
+            }
+
             render() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.drawBackground();
                 this.ctx.save();
                 this.ctx.translate(0, -this.cameraY);
 
-                // Draw platforms with new theme
                 this.platforms.forEach(p => {
                     this.drawPlatform(p);
-                    if (p.item === 'fly') {
-                        this.drawFly(p.x + p.width / 2, p.y - 15);
-                    }
+                    if (p.item === 'fly') this.drawFly(p.x + p.width / 2, p.y - 15);
+                    if (p.coin) this.drawCoin(p.x + p.width / 2, p.y - 15);
                 });
 
-                // Draw player (frog)
                 this.drawFrog();
                 
                 this.ctx.restore();
 
-                // Draw controls (tongue)
                 if (this.isCharging) {
                     this.drawTongue();
                 }
             }
 
+            drawBackground() {
+                let grad;
+                switch(this.zone) {
+                    case 'ice':
+                        grad = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                        grad.addColorStop(0, '#a1c4fd');
+                        grad.addColorStop(1, '#c2e9fb');
+                        break;
+                    case 'lava':
+                        grad = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                        grad.addColorStop(0, '#434343');
+                        grad.addColorStop(1, '#000000');
+                        break;
+                    case 'pond':
+                    default:
+                        grad = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                        grad.addColorStop(0, '#6dd5ed');
+                        grad.addColorStop(1, '#2193b0');
+                        break;
+                }
+                this.ctx.fillStyle = grad;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
             drawPlatform(p) {
+                // Zone-specific platform drawing
+                switch(this.zone) {
+                    case 'ice':
+                        this.drawIcePlatform(p);
+                        break;
+                    case 'lava':
+                        this.drawLavaPlatform(p);
+                        break;
+                    default: // Pond
+                        this.drawPondPlatform(p);
+                        break;
+                }
+            }
+
+            drawPondPlatform(p) {
                 switch(p.type) {
                     case 'moving': // Log
-                        this.ctx.fillStyle = '#8B4513';
-                        this.ctx.fillRect(p.x, p.y, p.width, p.height);
-                        this.ctx.fillStyle = '#654321';
-                        this.ctx.fillRect(p.x + 5, p.y + 5, p.width - 10, p.height - 10);
+                        this.ctx.fillStyle = '#8B4513'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        this.ctx.fillStyle = '#654321'; this.ctx.fillRect(p.x + 5, p.y + 5, p.width - 10, p.height - 10);
                         break;
                     case 'fragile': // Turtle
-                        this.ctx.fillStyle = '#006400'; // Dark green shell
-                        this.ctx.beginPath();
-                        this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height * 0.8, 0, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        this.ctx.fillStyle = '#556B2F'; // Head
-                        this.ctx.beginPath();
-                        this.ctx.arc(p.x + p.width + 5, p.y + p.height/2, 8, 0, Math.PI * 2);
-                        this.ctx.fill();
+                        this.ctx.fillStyle = '#006400'; this.ctx.beginPath(); this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height * 0.8, 0, 0, Math.PI * 2); this.ctx.fill();
+                        this.ctx.fillStyle = '#556B2F'; this.ctx.beginPath(); this.ctx.arc(p.x + p.width + 5, p.y + p.height/2, 8, 0, Math.PI * 2); this.ctx.fill();
                         break;
-                    case 'goal': // Lily pad with flower
-                        this.ctx.fillStyle = '#2E8B57'; // Lily pad
-                        this.ctx.beginPath();
-                        this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height / 2, 0, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        this.ctx.fillStyle = 'pink'; // Flower
-                        this.ctx.beginPath();
-                        this.ctx.arc(p.x + p.width/2, p.y + p.height/2, 8, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        this.ctx.fillStyle = 'yellow';
-                        this.ctx.beginPath();
-                        this.ctx.arc(p.x + p.width/2, p.y + p.height/2, 3, 0, Math.PI * 2);
-                        this.ctx.fill();
+                    default: // Lily pad
+                        this.ctx.fillStyle = '#2E8B57'; this.ctx.beginPath(); this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height / 2, 0, 0, Math.PI * 2); this.ctx.fill();
                         break;
-                    default: // Normal lily pad
-                        this.ctx.fillStyle = '#2E8B57';
-                        this.ctx.beginPath();
-                        this.ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, p.height / 2, 0, 0, Math.PI * 2);
-                        this.ctx.fill();
+                }
+            }
+
+            drawIcePlatform(p) {
+                switch(p.type) {
+                    case 'moving': // Floating ice sheet
+                        this.ctx.fillStyle = '#ffffff'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        this.ctx.strokeStyle = '#a1c4fd'; this.ctx.strokeRect(p.x, p.y, p.width, p.height);
+                        break;
+                    case 'fragile': // Cracked ice
+                        this.ctx.fillStyle = '#e0f7fa'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        this.ctx.strokeStyle = '#b0bec5'; this.ctx.beginPath(); this.ctx.moveTo(p.x+5, p.y+5); this.ctx.lineTo(p.x+p.width-5, p.y+p.height-5); this.ctx.stroke();
+                        break;
+                    default: // Solid ice block
+                        this.ctx.fillStyle = '#b3e5fc'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        break;
+                }
+            }
+
+            drawLavaPlatform(p) {
+                 switch(p.type) {
+                    case 'moving': // Floating rock
+                        this.ctx.fillStyle = '#616161'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        break;
+                    case 'fragile': // Crumbling rock
+                        this.ctx.fillStyle = '#757575'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
+                        this.ctx.fillStyle = '#424242'; this.ctx.fillRect(p.x+5,p.y+5,10,5); this.ctx.fillRect(p.x+30,p.y+2,10,5);
+                        break;
+                    default: // Volcanic rock
+                        this.ctx.fillStyle = '#424242'; this.ctx.fillRect(p.x, p.y, p.width, p.height);
                         break;
                 }
             }
 
             drawFrog() {
                 const p = this.player;
-                // Body
-                this.ctx.fillStyle = p.color;
-                this.ctx.beginPath();
-                this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Eyes
-                this.ctx.fillStyle = 'white';
-                this.ctx.beginPath();
-                this.ctx.arc(p.x - p.radius/2, p.y - p.radius/2, p.radius/3, 0, Math.PI * 2);
-                this.ctx.arc(p.x + p.radius/2, p.y - p.radius/2, p.radius/3, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                this.ctx.fillStyle = 'black';
-                this.ctx.beginPath();
-                this.ctx.arc(p.x - p.radius/2, p.y - p.radius/2, p.radius/6, 0, Math.PI * 2);
-                this.ctx.arc(p.x + p.radius/2, p.y - p.radius/2, p.radius/6, 0, Math.PI * 2);
-                this.ctx.fill();
+                this.ctx.fillStyle = p.color; this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); this.ctx.fill();
+                this.ctx.fillStyle = 'white'; this.ctx.beginPath(); this.ctx.arc(p.x - p.radius/2, p.y - p.radius/2, p.radius/3, 0, Math.PI * 2); this.ctx.arc(p.x + p.radius/2, p.y - p.radius/2, p.radius/3, 0, Math.PI * 2); this.ctx.fill();
+                this.ctx.fillStyle = 'black'; this.ctx.beginPath(); this.ctx.arc(p.x - p.radius/2, p.y - p.radius/2, p.radius/6, 0, Math.PI * 2); this.ctx.arc(p.x + p.radius/2, p.y - p.radius/2, p.radius/6, 0, Math.PI * 2); this.ctx.fill();
             }
 
             drawFly(x, y) {
-                // Body
-                this.ctx.fillStyle = 'black';
-                this.ctx.beginPath();
-                this.ctx.arc(x, y, 4, 0, Math.PI * 2);
-                this.ctx.fill();
-                // Wings
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                this.ctx.beginPath();
-                this.ctx.ellipse(x-5, y-3, 5, 2, -Math.PI/4, 0, Math.PI * 2);
-                this.ctx.ellipse(x+5, y-3, 5, 2, Math.PI/4, 0, Math.PI * 2);
-                this.ctx.fill();
+                this.ctx.fillStyle = 'black'; this.ctx.beginPath(); this.ctx.arc(x, y, 4, 0, Math.PI * 2); this.ctx.fill();
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; this.ctx.beginPath(); this.ctx.ellipse(x-5, y-3, 5, 2, -Math.PI/4, 0, Math.PI * 2); this.ctx.ellipse(x+5, y-3, 5, 2, Math.PI/4, 0, Math.PI * 2); this.ctx.fill();
+            }
+            
+            drawCoin(x,y){
+                this.ctx.fillStyle = 'gold'; this.ctx.beginPath(); this.ctx.arc(x, y, 8, 0, Math.PI * 2); this.ctx.fill();
+                this.ctx.fillStyle = 'orange'; this.ctx.beginPath(); this.ctx.arc(x, y, 5, 0, Math.PI * 2); this.ctx.fill();
             }
 
             drawTongue() {
                 this.ctx.save();
                 const playerScreenX = this.player.x;
                 const playerScreenY = this.player.y - this.cameraY;
-
-                const launchDx = this.chargeStart.x - this.chargeEnd.x;
-                const launchDy = this.chargeStart.y - this.chargeEnd.y;
-                
-                const startLineX = playerScreenX;
-                const startLineY = playerScreenY;
-                
                 const endLineX = this.chargeEnd.x;
                 const endLineY = this.chargeEnd.y;
-
-                // Tongue line
-                this.ctx.strokeStyle = '#ff82ab';
-                this.ctx.lineWidth = 5;
-                this.ctx.lineCap = 'round';
-                this.ctx.beginPath();
-                this.ctx.moveTo(startLineX, startLineY);
-                this.ctx.lineTo(endLineX, endLineY);
-                this.ctx.stroke();
-
-                // Tongue tip
-                this.ctx.fillStyle = '#ff82ab';
-                this.ctx.beginPath();
-                this.ctx.arc(endLineX, endLineY, 8, 0, Math.PI * 2);
-                this.ctx.fill();
-                
+                this.ctx.strokeStyle = '#ff82ab'; this.ctx.lineWidth = 5; this.ctx.lineCap = 'round'; this.ctx.beginPath(); this.ctx.moveTo(playerScreenX, playerScreenY); this.ctx.lineTo(endLineX, endLineY); this.ctx.stroke();
+                this.ctx.fillStyle = '#ff82ab'; this.ctx.beginPath(); this.ctx.arc(endLineX, endLineY, 8, 0, Math.PI * 2); this.ctx.fill();
                 this.ctx.restore();
             }
-            // --- END THEME CHANGE ---
             
             gameLoop() {
                 this.update();
@@ -483,7 +450,8 @@
             }
 
             updateUI() {
-                document.getElementById('score').textContent = this.score;
+                document.getElementById('height').textContent = this.score;
+                document.getElementById('coins').textContent = this.coins;
                 document.getElementById('highScore').textContent = this.highScore;
             }
             
@@ -493,17 +461,9 @@
                     this.highScore = this.score;
                     localStorage.setItem('frogJumpHighScore', this.highScore);
                 }
+                localStorage.setItem('frogJumpCoins', this.coins);
                 document.getElementById('finalScore').textContent = this.score;
                 document.getElementById('gameOverScreen').classList.add('visible');
-            }
-
-            winGame() {
-                this.isGameOver = true;
-                const gameOverScreen = document.getElementById('gameOverScreen');
-                gameOverScreen.querySelector('h2').textContent = "스테이지 클리어!";
-                this.score += 1000; // Bonus for winning
-                document.getElementById('finalScore').textContent = this.score;
-                gameOverScreen.classList.add('visible');
             }
             
             destroy() {
@@ -518,44 +478,21 @@
         }
 
         // Game Manager
-        const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
-        const infiniteModeBtn = document.getElementById('infiniteModeBtn');
-        const stageModeBtn = document.getElementById('stageModeBtn');
         const restartBtn = document.getElementById('restartBtn');
-        const mainMenuBtn = document.getElementById('mainMenuBtn');
 
         let currentGame = null;
-        let currentMode = 'infinite';
 
-        function startGame(mode) {
-            currentMode = mode;
-            startScreen.classList.remove('visible');
+        function startGame() {
             gameOverScreen.classList.remove('visible');
             if (currentGame) currentGame.destroy();
-            currentGame = new FrogJump(mode);
+            currentGame = new FrogJump();
         }
 
-        function showMainMenu() {
-            if (currentGame) currentGame.destroy();
-            currentGame = null;
-            gameOverScreen.classList.remove('visible');
-            startScreen.classList.add('visible');
-            gameOverScreen.querySelector('h2').textContent = "게임 오버";
-        }
+        restartBtn.addEventListener('click', startGame);
 
-        infiniteModeBtn.addEventListener('click', () => startGame('infinite'));
-        stageModeBtn.addEventListener('click', () => startGame('stage'));
-        restartBtn.addEventListener('click', () => startGame(currentMode));
-        mainMenuBtn.addEventListener('click', showMainMenu);
-
-        window.addEventListener('resize', () => {
-             if(currentGame) {
-                currentGame.destroy();
-                currentGame = null;
-             }
-             startGame(currentMode);
-        });
+        // Auto-start the game on load
+        window.addEventListener('load', startGame);
     </script>
 </body>
 </html>
