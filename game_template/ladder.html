@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>확률 사다리 게임</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .ladder-canvas {
+            background-image:
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .pulsing {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-6 md:p-8 transition-all duration-500">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">확률 사다리 게임</h1>
+            <p class="text-gray-500 mt-2">확률과 운명을 동시에 시험해 보세요!</p>
+        </div>
+
+        <!-- 설정 섹션 -->
+        <div id="setup-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div>
+                    <label for="participants" class="block text-lg font-semibold text-gray-700 mb-2">참여자 수</label>
+                    <input type="number" id="participants" class="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500" min="2" max="10" value="5">
+                </div>
+                <div>
+                    <label for="winners" class="block text-lg font-semibold text-gray-700 mb-2">당첨자 수</label>
+                    <input type="number" id="winners" class="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500" min="1" max="4" value="2">
+                </div>
+            </div>
+             <div class="text-center mt-6">
+                 <button id="generate-inputs" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-transform transform hover:scale-105">입력란 생성</button>
+            </div>
+        </div>
+
+        <!-- 입력란 섹션 -->
+        <div id="inputs-section" class="hidden mt-8">
+            <h2 class="text-2xl font-bold text-center text-gray-700 mb-6">참여자 정보 입력</h2>
+            <div id="inputs-container" class="space-y-4">
+                <!-- 참여자 입력란 동적 생성 영역 -->
+            </div>
+            <div class="mt-8 text-center">
+                <button id="start-game" class="w-full md:w-1/2 bg-green-500 text-white text-xl font-bold py-4 px-8 rounded-lg hover:bg-green-600 transition-transform transform hover:scale-105 shadow-lg pulsing">
+                    사다리 타기 시작!
+                </button>
+            </div>
+        </div>
+        
+        <!-- 게임 섹션 -->
+        <div id="game-section" class="hidden">
+            <div id="game-board" class="relative">
+                <canvas id="ladder-canvas" class="w-full rounded-lg border-2 border-gray-200 ladder-canvas"></canvas>
+                <div id="player-names" class="absolute top-0 left-0 right-0 flex justify-around p-2"></div>
+                <div id="results-display" class="absolute bottom-0 left-0 right-0 flex justify-around p-2"></div>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="restart-game" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 transition-transform transform hover:scale-105 hidden">다시하기</button>
+            </div>
+        </div>
+        
+        <!-- 결과 모달 -->
+        <div id="result-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 text-center transform transition-all scale-95 opacity-0">
+                <h2 id="modal-player-name" class="text-2xl font-bold text-gray-800 mb-2"></h2>
+                <p class="text-lg text-gray-600 mb-4">결과는...</p>
+                <p id="modal-result" class="text-4xl font-extrabold text-indigo-600 bg-indigo-50 p-6 rounded-lg"></p>
+                <button id="close-modal" class="mt-6 bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">닫기</button>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    const setupSection = document.getElementById('setup-section');
+    const inputsSection = document.getElementById('inputs-section');
+    const gameSection = document.getElementById('game-section');
+
+    const participantsInput = document.getElementById('participants');
+    const winnersInput = document.getElementById('winners');
+    const generateBtn = document.getElementById('generate-inputs');
+    
+    const inputsContainer = document.getElementById('inputs-container');
+    const startGameBtn = document.getElementById('start-game');
+    
+    const canvas = document.getElementById('ladder-canvas');
+    const ctx = canvas.getContext('2d');
+    const playerNamesContainer = document.getElementById('player-names');
+    const resultsDisplayContainer = document.getElementById('results-display');
+    
+    const restartBtn = document.getElementById('restart-game');
+    const resultModal = document.getElementById('result-modal');
+    const modalPlayerName = document.getElementById('modal-player-name');
+    const modalResult = document.getElementById('modal-result');
+    const closeModalBtn = document.getElementById('close-modal');
+
+    let players = [];
+    let outcomes = [];
+    let ladder = { vertical: [], horizontal: [] };
+    const colors = ['#f87171', '#fb923c', '#a3e635', '#34d399', '#60a5fa', '#a78bfa', '#f472b6', '#eab308', '#14b8a6', '#8b5cf6'];
+    
+    // 이벤트 리스너
+    const init = () => {
+        generateBtn.addEventListener('click', generateInputs);
+        startGameBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', restartGame);
+        closeModalBtn.addEventListener('click', hideModal);
+        resultModal.addEventListener('click', (e) => {
+            if (e.target === resultModal) hideModal();
+        });
+        window.addEventListener('resize', () => {
+            if (!gameSection.classList.contains('hidden')) {
+                resizeCanvas();
+                drawLadder();
+            }
+        });
+        generateInputs(); // 초기 로드 시 입력란 생성
+    };
+    
+    const validateSettings = () => {
+        const pCount = parseInt(participantsInput.value);
+        const wCount = parseInt(winnersInput.value);
+        if (pCount < 2 || pCount > 10) {
+            alert('참여자는 2명에서 10명 사이여야 합니다.');
+            return false;
+        }
+        if (wCount < 1 || wCount >= pCount) {
+            alert('당첨자는 1명 이상, 전체 참여자 수보다 적어야 합니다.');
+            return false;
+        }
+        winnersInput.max = pCount - 1;
+        return true;
+    };
+
+    const generateInputs = () => {
+        if (!validateSettings()) return;
+        
+        const count = parseInt(participantsInput.value);
+        inputsContainer.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const randomProb = Math.floor(Math.random() * 81) + 10; // 10-90 사이 확률
+            inputsContainer.innerHTML += `
+                <div class="participant-entry flex flex-col md:flex-row items-center gap-4 p-4 bg-gray-50 rounded-lg border">
+                    <input type="text" class="player-name w-full md:w-1/3 p-2 border border-gray-300 rounded-md" placeholder="참여자 ${i + 1}" value="참여자 ${i + 1}">
+                    <div class="flex items-center w-full md:w-2/3 gap-3">
+                         <span class="font-semibold text-gray-600">확률:</span>
+                         <input type="range" class="player-prob-slider w-full" min="0" max="100" value="${randomProb}">
+                         <input type="number" class="player-prob-number w-20 p-2 border border-gray-300 rounded-md text-center" min="0" max="100" value="${randomProb}">
+                    </div>
+                </div>
+            `;
+        }
+
+        document.querySelectorAll('.participant-entry').forEach(entry => {
+            const slider = entry.querySelector('.player-prob-slider');
+            const number = entry.querySelector('.player-prob-number');
+            slider.addEventListener('input', () => number.value = slider.value);
+            number.addEventListener('input', () => slider.value = number.value);
+        });
+
+        inputsSection.classList.remove('hidden');
+    };
+
+    const startGame = () => {
+        players = Array.from(document.querySelectorAll('.participant-entry')).map((entry, index) => ({
+            name: entry.querySelector('.player-name').value || `참여자 ${index + 1}`,
+            probability: parseInt(entry.querySelector('.player-prob-number').value, 10),
+            startIndex: index
+        }));
+        
+        const winnerCount = parseInt(winnersInput.value);
+        const winners = selectWinners(players, winnerCount);
+        
+        generateLadder();
+        
+        const destinations = calculateAllDestinations();
+        outcomes = arrangeOutcomes(winners, destinations, players);
+
+        // UI 전환
+        setupSection.classList.add('hidden');
+        inputsSection.classList.add('hidden');
+        gameSection.classList.remove('hidden');
+        startGameBtn.disabled = true;
+        startGameBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        resizeCanvas();
+        drawLadder();
+        displayPlayersAndResults();
+        runGameAnimation();
+    };
+
+    const selectWinners = (players, winnerCount) => {
+        let availablePlayers = JSON.parse(JSON.stringify(players));
+        const winners = [];
+
+        for (let i = 0; i < winnerCount; i++) {
+            let totalWeight = availablePlayers.reduce((sum, p) => sum + p.probability, 0);
+            if (totalWeight === 0) { // 모든 확률이 0이면 균등 추첨
+                 const randomIndex = Math.floor(Math.random() * availablePlayers.length);
+                 const winner = availablePlayers[randomIndex];
+                 winners.push(winner);
+                 availablePlayers.splice(randomIndex, 1);
+                 continue;
+            }
+            let random = Math.random() * totalWeight;
+            for (let j = 0; j < availablePlayers.length; j++) {
+                const player = availablePlayers[j];
+                random -= player.probability;
+                if (random < 0) {
+                    winners.push(player);
+                    availablePlayers.splice(j, 1);
+                    break;
+                }
+            }
+        }
+        return winners;
+    };
+    
+    const calculateAllDestinations = () => {
+        const destinations = [];
+        for (let i = 0; i < players.length; i++) {
+            destinations[i] = calculateFinalPosition(i);
+        }
+        return destinations;
+    };
+
+    const calculateFinalPosition = (startIndex) => {
+        let currentCol = startIndex;
+        ladder.horizontal.forEach(rung => {
+            if (rung.startCol === currentCol) {
+                currentCol = rung.endCol;
+            } else if (rung.endCol === currentCol) {
+                currentCol = rung.startCol;
+            }
+        });
+        return currentCol;
+    };
+
+    const arrangeOutcomes = (winners, destinations) => {
+        const finalOutcomes = new Array(players.length).fill("꽝");
+        const winnerStartIndexes = winners.map(w => w.startIndex);
+
+        winnerStartIndexes.forEach(startIndex => {
+            const destinationIndex = destinations[startIndex];
+            finalOutcomes[destinationIndex] = "당첨";
+        });
+        return finalOutcomes;
+    };
+    
+    const runGameAnimation = async () => {
+        for (let i = 0; i < players.length; i++) {
+            await traceLadderPath(i);
+        }
+        restartBtn.classList.remove('hidden');
+    };
+
+    const resizeCanvas = () => {
+        const container = document.getElementById('game-board');
+        canvas.width = container.offsetWidth;
+        canvas.height = Math.min(window.innerHeight * 0.6, 500);
+    };
+
+    const generateLadder = () => {
+        ladder = { vertical: [], horizontal: [] };
+        const numPlayers = players.length;
+        const width = canvas.width || document.getElementById('game-board').offsetWidth;
+        const height = canvas.height || 500;
+        const spacing = width / (numPlayers + 1);
+
+        for (let i = 0; i < numPlayers; i++) {
+            ladder.vertical.push({ x: spacing * (i + 1) });
+        }
+        const numRungs = numPlayers * 3;
+        const rungHeightStep = height * 0.8 / numRungs;
+        for (let i = 0; i < numRungs; i++) {
+            const y = height * 0.1 + i * rungHeightStep + Math.random() * 10 - 5;
+            const startCol = Math.floor(Math.random() * (numPlayers - 1));
+            const isOverlapping = ladder.horizontal.some(rung => Math.abs(rung.y - y) < 20 && (rung.startCol === startCol || rung.startCol === startCol - 1));
+            if (!isOverlapping) {
+                ladder.horizontal.push({ y, startCol, endCol: startCol + 1 });
+            }
+        }
+        ladder.horizontal.sort((a, b) => a.y - b.y);
+    };
+
+    const drawLadder = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#d1d5db';
+        ladder.vertical.forEach(line => {
+            ctx.beginPath();
+            ctx.moveTo(line.x, 0);
+            ctx.lineTo(line.x, canvas.height);
+            ctx.stroke();
+        });
+        ladder.horizontal.forEach(rung => {
+            const x1 = ladder.vertical[rung.startCol].x;
+            const x2 = ladder.vertical[rung.endCol].x;
+            ctx.beginPath();
+            ctx.moveTo(x1, rung.y);
+            ctx.lineTo(x2, rung.y);
+            ctx.stroke();
+        });
+    };
+
+    const displayPlayersAndResults = () => {
+        playerNamesContainer.innerHTML = '';
+        resultsDisplayContainer.innerHTML = '';
+        players.forEach((player, index) => {
+            const nameEl = document.createElement('div');
+            nameEl.textContent = player.name;
+            nameEl.className = 'text-sm md:text-base font-bold p-2 rounded-lg';
+            nameEl.style.color = colors[index % colors.length];
+            nameEl.style.position = 'absolute';
+            nameEl.style.top = '-40px';
+            nameEl.style.left = `${ladder.vertical[index].x}px`;
+            nameEl.style.transform = 'translateX(-50%)';
+            playerNamesContainer.appendChild(nameEl);
+
+            const resultEl = document.createElement('div');
+            resultEl.textContent = '???';
+            resultEl.className = 'text-sm md:text-base font-bold bg-gray-200 p-2 rounded-lg';
+            resultEl.id = `result-label-${index}`;
+            resultEl.style.position = 'absolute';
+            resultEl.style.bottom = '-40px';
+            resultEl.style.left = `${ladder.vertical[index].x}px`;
+            resultEl.style.transform = 'translateX(-50%)';
+            resultsDisplayContainer.appendChild(resultEl);
+        });
+    };
+
+    const traceLadderPath = (startIndex) => {
+        return new Promise(resolve => {
+            let currentCol = startIndex;
+            let x = ladder.vertical[currentCol].x;
+            let y = 0;
+            const pathColor = colors[startIndex % colors.length];
+            const animationSpeed = 2;
+
+            const animate = () => {
+                const nextY = y + animationSpeed;
+                let crossed = false;
+                for (const rung of ladder.horizontal) {
+                    if (rung.y > y && rung.y <= nextY) {
+                        if (rung.startCol === currentCol) {
+                            drawPath(x, y, x, rung.y, pathColor);
+                            currentCol = rung.endCol;
+                            x = ladder.vertical[currentCol].x;
+                            drawPath(ladder.vertical[rung.startCol].x, rung.y, x, rung.y, pathColor);
+                            y = rung.y;
+                            crossed = true;
+                            break;
+                        } else if (rung.endCol === currentCol) {
+                            drawPath(x, y, x, rung.y, pathColor);
+                            currentCol = rung.startCol;
+                            x = ladder.vertical[currentCol].x;
+                            drawPath(ladder.vertical[rung.endCol].x, rung.y, x, rung.y, pathColor);
+                            y = rung.y;
+                            crossed = true;
+                            break;
+                        }
+                    }
+                }
+                if (!crossed) drawPath(x, y, x, nextY, pathColor);
+                y = nextY;
+                if (y < canvas.height) requestAnimationFrame(animate);
+                else {
+                    const finalResult = outcomes[currentCol];
+                    const resultEl = document.getElementById(`result-label-${currentCol}`);
+                    resultEl.textContent = finalResult;
+                    resultEl.style.backgroundColor = pathColor;
+                    resultEl.style.color = 'white';
+                    if(finalResult === '당첨') {
+                         resultEl.classList.add('animate-bounce');
+                    }
+                    showModal(players[startIndex].name, finalResult, resolve);
+                }
+            };
+            animate();
+        });
+    };
+    
+    const drawPath = (x1, y1, x2, y2, color) => {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 5;
+        ctx.stroke();
+    };
+
+    const restartGame = () => {
+        gameSection.classList.add('hidden');
+        inputsSection.classList.add('hidden');
+        setupSection.classList.remove('hidden');
+        restartBtn.classList.add('hidden');
+        startGameBtn.disabled = false;
+        startGameBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        generateInputs();
+    };
+    
+    const showModal = (playerName, result, resolveCallback) => {
+        modalPlayerName.textContent = playerName;
+        modalResult.textContent = result;
+        if (result === '당첨') {
+            modalResult.classList.remove('text-indigo-600', 'bg-indigo-50');
+            modalResult.classList.add('text-green-600', 'bg-green-50');
+        } else {
+            modalResult.classList.remove('text-green-600', 'bg-green-50');
+            modalResult.classList.add('text-indigo-600', 'bg-indigo-50');
+        }
+        resultModal.classList.remove('hidden');
+        resultModal.dataset.resolve = 'true';
+        const checkModalClose = () => {
+             if (resultModal.classList.contains('hidden')) {
+                 if(resultModal.dataset.resolve === 'true') {
+                     resolveCallback();
+                     resultModal.dataset.resolve = 'false';
+                 }
+                 return;
+             }
+             requestAnimationFrame(checkModalClose);
+        };
+        checkModalClose();
+        setTimeout(() => resultModal.querySelector('div').classList.remove('scale-95', 'opacity-0'), 10);
+    };
+
+    const hideModal = () => {
+        resultModal.querySelector('div').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => resultModal.classList.add('hidden'), 300);
+    };
+    
+    init();
+</script>
+</body>
+</html>
+
