@@ -5,51 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>연결 중...</title>
     <style>
-        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; }
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="loader"></div>
+
     <script>
-        alert('e')
         const urlParams = new URLSearchParams(window.location.search);
         let target = urlParams.get('target');
         if (target) target = decodeURIComponent(target);
 
-        // 핵심 플래그: 패턴 해제 후 재시도 중인지 확인
-        const isRetry = urlParams.get('retry');
-
-        function tryLaunch() {
+        function launchViaOtherBrowser() {
             if (!target) return;
-            // 딥링크 실행
-            window.location.href = target;
+
+            // 1. 대상 URL을 분석 (https://... 또는 myapp://...)
+            let cleanUrl = target;
+            let scheme = "https";
+            
+            if (target.includes("://")) {
+                const parts = target.split("://");
+                scheme = parts[0];
+                cleanUrl = parts[1];
+            }
+
+            /**
+             * 2. [핵심] 다른 브라우저(삼성 인터넷) 호출 인텐트 조립
+             * 크롬이 아닌 삼성 인터넷 패키지명을 명시합니다.
+             */
+            const samsungIntent = `intent://${cleanUrl}#Intent;scheme=${scheme};package=com.sec.android.app.sbrowser;end`;
+
+            // 3. 실행
+            window.location.href = samsungIntent;
         }
 
-        // 1. 초기 진입 시 실행
-        window.onload = () => {
-            tryLaunch();
-        };
-
-        // 2. [터치 없이 해결하는 핵심] 가시성 변화 감지
+        // 패턴 해제 감지
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                // 패턴을 풀고 돌아왔을 때, 아직 'retry' 상태가 아니라면
-                if (isRetry !== 'true') {
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('retry', 'true');
-                    // 페이지 뒤에 타임스탬프를 붙여서 완전히 새로운 페이지처럼 인식하게 함
-                    currentUrl.searchParams.set('t', Date.now());
-
-                    // 페이지 자체를 새로고침 (이게 '터치' 대신 브라우저 세션을 깨우는 역할)
-                    window.location.replace(currentUrl.toString());
-                } else {
-                    // 새로고침되어 돌아온 상태라면 다시 딥링크 시도
-                    tryLaunch();
-                }
+                // 크롬이 막고 있다면, 삼성 인터넷을 깨워서 target을 던집니다.
+                launchViaOtherBrowser();
             }
         });
+
+        // 초기 실행
+        window.onload = () => {
+            if (document.visibilityState === 'visible') {
+                window.location.href = target; // 처음엔 그냥 시도
+            }
+        };
     </script>
 </body>
 </html>
