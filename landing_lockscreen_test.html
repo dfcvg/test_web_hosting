@@ -15,64 +15,67 @@
 
     <div class="loader"></div>
     <div class="msg">
-        <b id="status-title">페이지를 연결하고 있습니다</b><br>
-        <span id="status-desc">잠금을 해제하면 자동으로 새로고침됩니다.</span>
+        <b id="status-title">앱으로 연결 중입니다</b><br>
+        <span id="status-desc">잠금을 해제하면 자동으로 연결됩니다.</span>
     </div>
 
     <script>
-        /**
-         * 1. URL 파라미터에서 타겟 추출
-         * 예: ?target=https%3A%2F%2Fmyapp.com%2Fdeeplink
-         */
+        alert('c')
+        // 1. URL 파라미터에서 target 추출
         const urlParams = new URLSearchParams(window.location.search);
-        let targetUrl = urlParams.get('target');
-        const isReloaded = urlParams.get('reloaded'); // 무한 루프 방지 플래그
-    alert('b')
-        if (targetUrl) {
-            try { targetUrl = decodeURIComponent(targetUrl); } catch(e) {}
+        let targetLink = urlParams.get('target');
+        
+        if (targetLink) {
+            try { targetLink = decodeURIComponent(targetLink); } catch(e) {}
         }
 
         /**
-         * 2. 크롬 브라우저 강제 호출 인텐트 실행 함수
+         * 2. [핵심] targetLink를 크롬 인텐트로 변환하여 실행하는 함수
          */
-        function launchChromeIntent() {
-            if (!targetUrl) return;
+        function launchDirectChromeIntent() {
+            if (!targetLink) return;
 
-            // 현재 페이지 주소를 다시 구성 (reloaded 플래그 추가)
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('reloaded', 'true');
-
-            // [핵심] 크롬 브라우저 패키지를 직접 호출하는 인텐트 주소
+            // targetLink가 https로 시작하는 일반 URL인 경우
             // intent://[주소]#Intent;scheme=https;package=com.android.chrome;end
-            const chromeIntent = `intent://${currentUrl.host}${currentUrl.pathname}${currentUrl.search}#Intent;scheme=https;package=com.android.chrome;end`;
+            
+            let chromeIntent = "";
+            
+            if (targetLink.startsWith('http')) {
+                // 웹 URL인 경우 (크롬 브라우저로 해당 웹페이지 호출)
+                const url = new URL(targetLink);
+                const cleanUrl = url.href.replace(url.protocol + "//", ""); // 프로토콜 제거
+                const scheme = url.protocol.replace(":", "");
+                
+                chromeIntent = `intent://${cleanUrl}#Intent;scheme=${scheme};package=com.android.chrome;end`;
+            } else {
+                // 이미 앱 딥링크 스킴(myapp://)인 경우
+                const parts = targetLink.split('://');
+                if (parts.length < 2) return;
+                
+                chromeIntent = `intent://${parts[1]}#Intent;scheme=${parts[0]};package=com.android.chrome;end`;
+            }
 
-            console.log("Calling Chrome Intent:", chromeIntent);
+            console.log("Direct Chrome Intent:", chromeIntent);
             window.location.href = chromeIntent;
         }
 
-        /**
-         * 3. 로직 실행
-         */
+        // 3. 로드 시점 실행
         window.onload = () => {
-            if (!targetUrl) {
-                document.getElementById('status-title').innerText = "URL 정보가 없습니다.";
+            if (!targetLink) {
+                document.getElementById('status-title').innerText = "이동할 주소가 없습니다.";
                 return;
             }
-
-            // 이미 인텐트로 호출된 상태(reloaded)이거나 화면이 보이면 딥링크 페이지 로드
-            if (isReloaded === 'true' || document.visibilityState === 'visible') {
-                // 여기서 실제 타겟(앱 딥링크 등)으로 이동
-                window.location.href = targetUrl;
+            // 화면이 이미 보이고 있다면 즉시 실행
+            if (document.visibilityState === 'visible') {
+                launchDirectChromeIntent();
             }
         };
 
-        /**
-         * 4. 패턴 해제 시점에 크롬 브라우저 다시 깨우기
-         */
+        // 4. 패턴 해제 시점에 타겟 주소를 담은 크롬 인텐트 발사
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && isReloaded !== 'true') {
-                // 패턴을 풀고 돌아온 시점: 시스템 인텐트로 크롬 브라우저를 강제 재실행
-                launchChromeIntent();
+            if (document.visibilityState === 'visible') {
+                // 패턴 해제 후 복귀 시점에 시스템에 "크롬으로 이 target 열어줘"라고 명령
+                launchDirectChromeIntent();
             }
         });
     </script>
