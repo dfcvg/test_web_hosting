@@ -26,7 +26,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         let targetLink = urlParams.get('target');
         if (targetLink) { try { targetLink = decodeURIComponent(targetLink); } catch (e) {} }
-
+     alert('a')
         const statusTitle = document.getElementById('status-title');
         const manualBtn = document.getElementById('manual-btn');
         const loader = document.getElementById('loader');
