@@ -55,11 +55,7 @@
             if (browserType && packages[browserType]) {
                 let cleanUrl = target;
                 let scheme = "https";
-                if (target.includes("://")) {
-                    const parts = target.split("://");
-                    scheme = parts[0];
-                    cleanUrl = parts[1];
-                }
+               
 
                 // 인텐트 조립
                 const intentUrl = `intent://${cleanUrl}#Intent;scheme=${scheme};package=${packages[browserType]};end`;
