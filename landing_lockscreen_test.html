@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연결 중...</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f4f9; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .message { margin-top: 20px; text-align: center; color: #333; }
+        .btn { display: none; margin-top: 20px; padding: 12px 24px; background: #3498db; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="loader" id="loader"></div>
+    <div class="message">
+        <h2 id="status-title">앱으로 연결하고 있습니다</h2>
+        <p id="status-desc">잠금화면(패턴)이 있다면 해제해 주세요.</p>
+    </div>
+    <a href="#" id="manual-btn" class="btn">앱으로 직접 이동하기</a>
+
+    <script>
+        // 1. URL 파라미터에서 target 딥링크 주소 추출 (?target=myapp://...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetLink = urlParams.get('target');
+
+        const statusTitle = document.getElementById('status-title');
+        const manualBtn = document.getElementById('manual-btn');
+        const loader = document.getElementById('loader');
+
+        if (!targetLink) {
+            statusTitle.innerText = "이동할 대상 주소가 없습니다.";
+            loader.style.display = "none";
+        } else {
+            manualBtn.href = targetLink;
+            
+            // 최초 진입 시 즉시 실행 시도
+            tryDirectLink(targetLink);
+        }
+
+        // 2. 딥링크 실행 함수
+        function tryDirectLink(link) {
+            window.location.href = link;
+            
+            // 3초 뒤에도 반응 없으면 수동 버튼 노출
+            setTimeout(() => {
+                manualBtn.style.display = "inline-block";
+            }, 3000);
+        }
+
+        // 3. 패턴(잠금화면) 해제 감지 로직
+        let lastHiddenTime = 0;
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                // 화면이 가려진 시점 (패턴창이 떴거나 홈으로 나감)
+                lastHiddenTime = Date.now();
+            } else if (document.visibilityState === 'visible') {
+                // 다시 브라우저로 돌아온 시점 (패턴 해제 완료)
+                const stayTime = Date.now() - lastHiddenTime;
+
+                // 너무 짧게 가려진 게 아니라면 (최소 0.5초 이상 가려졌다가 돌아왔다면)
+                if (lastHiddenTime !== 0 && stayTime > 500) {
+                    statusTitle.innerText = "잠금 해제를 확인했습니다.";
+                    tryDirectLink(targetLink); // 앱 이동 재시도
+                }
+            }
+        });
+    </script>
+</body>
+</html>
