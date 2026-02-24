@@ -5,79 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>연결 중</title>
     <style>
-        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8f9fa; }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .msg { margin-top: 20px; font-size: 16px; color: #333; text-align: center; }
+        body { font-family: sans-serif; margin: 0; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .msg-box { text-align: center; padding: 20px; }
+        /* 터치를 유도하는 반투명 오버레이 */
+        #touch-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); color: white;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; cursor: pointer;
+        }
+        .touch-icon { font-size: 50px; margin-bottom: 10px; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     </style>
 </head>
 <body>
 
-    <div class="loader"></div>
-    <div class="msg">
-        <b id="status-title">앱으로 연결 중입니다</b><br>
-        <span id="status-desc">잠금을 해제하면 자동으로 연결됩니다.</span>
+    <div class="msg-box">
+        <h2>앱으로 이동 중입니다</h2>
+        <p>잠금을 해제하셨나요?</p>
+    </div>
+
+    <div id="touch-layer">
+        <div class="touch-icon">👆</div>
+        <div style="font-size: 18px; font-weight: bold;">화면을 터치해주세요</div>
+        <p style="font-size: 14px; opacity: 0.8;">터치하시면 앱으로 연결이 완료됩니다.</p>
     </div>
 
     <script>
-        alert('c')
-        // 1. URL 파라미터에서 target 추출
-        const urlParams = new URLSearchParams(window.location.search);
-        let targetLink = urlParams.get('target');
-        
-        if (targetLink) {
-            try { targetLink = decodeURIComponent(targetLink); } catch(e) {}
+        // 1. URL에서 target 가져오기
+        const params = new URLSearchParams(window.location.search);
+        let target = params.get('target');
+        if (target) target = decodeURIComponent(target);
+
+        const touchLayer = document.getElementById('touch-layer');
+
+        // 2. 앱 실행 함수 (그냥 href 사용)
+        function openApp() {
+            if (!target) return;
+            window.location.href = target;
+            
+            // 이동 시도 후 레이어 닫기
+            setTimeout(() => { touchLayer.style.display = 'none'; }, 1000);
         }
 
-        /**
-         * 2. [핵심] targetLink를 크롬 인텐트로 변환하여 실행하는 함수
-         */
-        function launchDirectChromeIntent() {
-            if (!targetLink) return;
-
-            // targetLink가 https로 시작하는 일반 URL인 경우
-            // intent://[주소]#Intent;scheme=https;package=com.android.chrome;end
-            
-            let chromeIntent = "";
-            
-            if (targetLink.startsWith('http')) {
-                // 웹 URL인 경우 (크롬 브라우저로 해당 웹페이지 호출)
-                const url = new URL(targetLink);
-                const cleanUrl = url.href.replace(url.protocol + "//", ""); // 프로토콜 제거
-                const scheme = url.protocol.replace(":", "");
-                
-                chromeIntent = `intent://${cleanUrl}#Intent;scheme=${scheme};package=com.android.chrome;end`;
-            } else {
-                // 이미 앱 딥링크 스킴(myapp://)인 경우
-                const parts = targetLink.split('://');
-                if (parts.length < 2) return;
-                
-                chromeIntent = `intent://${parts[1]}#Intent;scheme=${parts[0]};package=com.android.chrome;end`;
-            }
-
-            console.log("Direct Chrome Intent:", chromeIntent);
-            window.location.href = chromeIntent;
-        }
-
-        // 3. 로드 시점 실행
-        window.onload = () => {
-            if (!targetLink) {
-                document.getElementById('status-title').innerText = "이동할 주소가 없습니다.";
-                return;
-            }
-            // 화면이 이미 보이고 있다면 즉시 실행
-            if (document.visibilityState === 'visible') {
-                launchDirectChromeIntent();
-            }
-        };
-
-        // 4. 패턴 해제 시점에 타겟 주소를 담은 크롬 인텐트 발사
+        // 3. 패턴 해제(복귀) 감지
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                // 패턴 해제 후 복귀 시점에 시스템에 "크롬으로 이 target 열어줘"라고 명령
-                launchDirectChromeIntent();
+                // 패턴을 풀고 돌아온 시점: 터치 레이어를 띄움
+                touchLayer.style.display = 'flex';
             }
         });
+
+        // 4. 레이어 클릭 시 실제 앱 호출 (User Gesture 확보)
+        touchLayer.onclick = () => {
+            openApp();
+        };
+
+        // 5. 초기 진입 시 (잠금 안된 상태라면) 즉시 시도
+        window.onload = () => {
+            if (document.visibilityState === 'visible' && target) {
+                window.location.href = target;
+            }
+        };
     </script>
 </body>
 </html>
