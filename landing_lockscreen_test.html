@@ -3,79 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>연결 중...</title>
+    <title>연결 중</title>
     <style>
-        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f4f7fa; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8f9fa; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .message { margin-top: 20px; text-align: center; color: #333; }
-        .btn { display: none; margin-top: 20px; padding: 12px 24px; background: #3498db; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        .msg { margin-top: 20px; font-size: 16px; color: #333; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div class="loader" id="loader"></div>
-    <div class="message">
-        <h2 id="status-title">앱으로 연결 중입니다</h2>
-        <p id="status-desc">잠금을 해제하면 자동으로 연결됩니다.</p>
+    <div class="loader"></div>
+    <div class="msg">
+        <b id="status-title">페이지를 연결하고 있습니다</b><br>
+        <span id="status-desc">잠금을 해제하면 자동으로 새로고침됩니다.</span>
     </div>
-    <a href="#" id="manual-btn" class="btn">앱으로 직접 이동하기</a>
 
     <script>
-        // 1. 설정 및 파라미터 추출
+        /**
+         * 1. URL 파라미터에서 타겟 추출
+         * 예: ?target=https%3A%2F%2Fmyapp.com%2Fdeeplink
+         */
         const urlParams = new URLSearchParams(window.location.search);
-        let targetLink = urlParams.get('target');
-        const isReloaded = urlParams.get('reloaded'); // 재호출 여부 플래그
-        alert('a')
-        if (targetLink) {
-            try { targetLink = decodeURIComponent(targetLink); } catch(e) {}
+        let targetUrl = urlParams.get('target');
+        const isReloaded = urlParams.get('reloaded'); // 무한 루프 방지 플래그
+    alert('b')
+        if (targetUrl) {
+            try { targetUrl = decodeURIComponent(targetUrl); } catch(e) {}
         }
 
-        const statusTitle = document.getElementById('status-title');
-        const manualBtn = document.getElementById('manual-btn');
+        /**
+         * 2. 크롬 브라우저 강제 호출 인텐트 실행 함수
+         */
+        function launchChromeIntent() {
+            if (!targetUrl) return;
 
-        // 2. 딥링크 실행 함수
-        function launchApp(link) {
-            if (!link) return;
-             const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('reloaded', 'true'); // 무한루프 방지 플래그 추가
-                
-                const chromeIntent = `intent://${currentUrl.host}${currentUrl.pathname}${currentUrl.search}#Intent;scheme=https;package=com.android.chrome;end`;
-                
-                statusTitle.innerText = "연결을 재시도합니다...";
-                
-                // 현재 페이지를 크롬 인텐트로 다시 로드
-                window.location.href = chromeIntent;
+            // 현재 페이지 주소를 다시 구성 (reloaded 플래그 추가)
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('reloaded', 'true');
+
+            // [핵심] 크롬 브라우저 패키지를 직접 호출하는 인텐트 주소
+            // intent://[주소]#Intent;scheme=https;package=com.android.chrome;end
+            const chromeIntent = `intent://${currentUrl.host}${currentUrl.pathname}${currentUrl.search}#Intent;scheme=https;package=com.android.chrome;end`;
+
+            console.log("Calling Chrome Intent:", chromeIntent);
+            window.location.href = chromeIntent;
         }
 
-        // 3. 페이지 로드 시점 로직
+        /**
+         * 3. 로직 실행
+         */
         window.onload = () => {
-            if (!targetLink) {
-                statusTitle.innerText = "대상 주소가 없습니다.";
+            if (!targetUrl) {
+                document.getElementById('status-title').innerText = "URL 정보가 없습니다.";
                 return;
             }
 
-            // 만약 이미 인텐트로 재호출된 상태라면 바로 딥링크 실행
+            // 이미 인텐트로 호출된 상태(reloaded)이거나 화면이 보이면 딥링크 페이지 로드
             if (isReloaded === 'true' || document.visibilityState === 'visible') {
-                launchApp(targetLink);
+                // 여기서 실제 타겟(앱 딥링크 등)으로 이동
+                window.location.href = targetUrl;
             }
         };
 
-        // 4. [핵심] 패턴 해제(Visibility Change) 감지 및 크롬 재호출
+        /**
+         * 4. 패턴 해제 시점에 크롬 브라우저 다시 깨우기
+         */
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible' && isReloaded !== 'true') {
-                
-                // 패턴을 풀고 돌아온 시점에 크롬 브라우저를 '인텐트'로 새로 깨움
-                // 이렇게 하면 브라우저의 User Gesture 권한이 갱신될 확률이 높습니다.
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('reloaded', 'true'); // 무한루프 방지 플래그 추가
-                
-                const chromeIntent = `intent://${currentUrl.host}${currentUrl.pathname}${currentUrl.search}#Intent;scheme=https;package=com.android.chrome;end`;
-                
-                statusTitle.innerText = "연결을 재시도합니다...";
-                
-                // 현재 페이지를 크롬 인텐트로 다시 로드
-                window.location.href = chromeIntent;
+                // 패턴을 풀고 돌아온 시점: 시스템 인텐트로 크롬 브라우저를 강제 재실행
+                launchChromeIntent();
             }
         });
     </script>
