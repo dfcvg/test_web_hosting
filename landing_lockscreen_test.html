@@ -26,7 +26,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         let targetLink = urlParams.get('target');
         const isReloaded = urlParams.get('reloaded'); // 재호출 여부 플래그
-        
+        alert('a')
         if (targetLink) {
             try { targetLink = decodeURIComponent(targetLink); } catch(e) {}
         }
