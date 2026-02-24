@@ -3,70 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>연결 중</title>
+    <title>연결 중...</title>
     <style>
-        body { font-family: sans-serif; margin: 0; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .msg-box { text-align: center; padding: 20px; }
-        /* 터치를 유도하는 반투명 오버레이 */
-        #touch-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); color: white;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000; cursor: pointer;
-        }
-        .touch-icon { font-size: 50px; margin-bottom: 10px; animation: bounce 1s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-    <div class="msg-box">
-        <h2>앱으로 이동 중입니다</h2>
-        <p>잠금을 해제하셨나요?</p>
-    </div>
-
-    <div id="touch-layer">
-        <div class="touch-icon">👆</div>
-        <div style="font-size: 18px; font-weight: bold;">화면을 터치해주세요</div>
-        <p style="font-size: 14px; opacity: 0.8;">터치하시면 앱으로 연결이 완료됩니다.</p>
-    </div>
-
+    <div class="loader"></div>
     <script>
-        // 1. URL에서 target 가져오기
-        const params = new URLSearchParams(window.location.search);
-        let target = params.get('target');
+        alert('e')
+        const urlParams = new URLSearchParams(window.location.search);
+        let target = urlParams.get('target');
         if (target) target = decodeURIComponent(target);
 
-        const touchLayer = document.getElementById('touch-layer');
+        // 핵심 플래그: 패턴 해제 후 재시도 중인지 확인
+        const isRetry = urlParams.get('retry');
 
-        // 2. 앱 실행 함수 (그냥 href 사용)
-        function openApp() {
+        function tryLaunch() {
             if (!target) return;
+            // 딥링크 실행
             window.location.href = target;
-            
-            // 이동 시도 후 레이어 닫기
-            setTimeout(() => { touchLayer.style.display = 'none'; }, 1000);
         }
 
-        // 3. 패턴 해제(복귀) 감지
+        // 1. 초기 진입 시 실행
+        window.onload = () => {
+            tryLaunch();
+        };
+
+        // 2. [터치 없이 해결하는 핵심] 가시성 변화 감지
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                // 패턴을 풀고 돌아온 시점: 터치 레이어를 띄움
-                touchLayer.style.display = 'flex';
+                // 패턴을 풀고 돌아왔을 때, 아직 'retry' 상태가 아니라면
+                if (isRetry !== 'true') {
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set('retry', 'true');
+                    // 페이지 뒤에 타임스탬프를 붙여서 완전히 새로운 페이지처럼 인식하게 함
+                    currentUrl.searchParams.set('t', Date.now());
+
+                    // 페이지 자체를 새로고침 (이게 '터치' 대신 브라우저 세션을 깨우는 역할)
+                    window.location.replace(currentUrl.toString());
+                } else {
+                    // 새로고침되어 돌아온 상태라면 다시 딥링크 시도
+                    tryLaunch();
+                }
             }
         });
-
-        // 4. 레이어 클릭 시 실제 앱 호출 (User Gesture 확보)
-        touchLayer.onclick = () => {
-            openApp();
-        };
-
-        // 5. 초기 진입 시 (잠금 안된 상태라면) 즉시 시도
-        window.onload = () => {
-            if (document.visibilityState === 'visible' && target) {
-                window.location.href = target;
-            }
-        };
     </script>
 </body>
 </html>
