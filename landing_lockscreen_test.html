@@ -37,14 +37,15 @@
         // 2. 딥링크 실행 함수
         function launchApp(link) {
             if (!link) return;
-            window.location.href = link;
-            
-            // 앱 이동 실패 시 3.5초 후 수동 버튼 노출
-            setTimeout(() => {
-                document.getElementById('loader').style.display = "none";
-                manualBtn.style.display = "inline-block";
-                manualBtn.href = link;
-            }, 3500);
+             const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('reloaded', 'true'); // 무한루프 방지 플래그 추가
+                
+                const chromeIntent = `intent://${currentUrl.host}${currentUrl.pathname}${currentUrl.search}#Intent;scheme=https;package=com.android.chrome;end`;
+                
+                statusTitle.innerText = "연결을 재시도합니다...";
+                
+                // 현재 페이지를 크롬 인텐트로 다시 로드
+                window.location.href = chromeIntent;
         }
 
         // 3. 페이지 로드 시점 로직
