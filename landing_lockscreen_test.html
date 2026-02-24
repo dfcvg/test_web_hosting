@@ -3,59 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>연결 중...</title>
+    <title>연결 중</title>
     <style>
-        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; }
+        .msg-box { text-align: center; padding: 20px; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #manual-btn { display: none; margin-top: 20px; padding: 12px 24px; background: #333; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="loader"></div>
+
+    <div class="msg-box">
+        <div class="loader" id="loader"></div>
+        <h2 id="status-title">앱으로 연결하고 있습니다</h2>
+        <p id="status-desc">잠금을 해제하면 자동으로 연결됩니다.</p>
+        <a href="#" id="manual-btn">앱으로 직접 이동하기</a>
+    </div>
 
     <script>
-        alert('a')
+        // 1. 파라미터 추출
         const urlParams = new URLSearchParams(window.location.search);
         let target = urlParams.get('target');
+        const browserType = urlParams.get('browser'); // 'samsung', 'naver', 'chrome'
+        
         if (target) target = decodeURIComponent(target);
 
-        function launchViaOtherBrowser() {
-            if (!target) return;
+        // 앱 중복 실행 방지 플래그
+        const LAUNCHED_KEY = 'did_launch_app_final';
 
-            // 1. 대상 URL을 분석 (https://... 또는 myapp://...)
-            let cleanUrl = target;
-            let scheme = "https";
-            
-            if (target.includes("://")) {
-                const parts = target.split("://");
-                scheme = parts[0];
-                cleanUrl = parts[1];
+        // 2. 브라우저별 패키지명 매핑
+        const packages = {
+            'samsung': 'com.sec.android.app.sbrowser',
+            'naver': 'com.nhn.android.search',
+            'chrome': 'com.android.chrome'
+        };
+
+        function launchApp() {
+            // 이미 실행 성공 기록이 있다면 중단
+            if (sessionStorage.getItem(LAUNCHED_KEY) === 'true') {
+                showSuccessUI();
+                return;
             }
 
-            /**
-             * 2. [핵심] 다른 브라우저(삼성 인터넷) 호출 인텐트 조립
-             * 크롬이 아닌 삼성 인터넷 패키지명을 명시합니다.
-             */
-            const samsungIntent = `intent://${cleanUrl}#Intent;scheme=${scheme};package=com.sec.android.app.sbrowser;end`;
+            if (!target) return;
 
-            // 3. 실행
-            window.location.href = samsungIntent;
+            // 실행 기록 저장
+            sessionStorage.setItem(LAUNCHED_KEY, 'true');
+
+            // 브라우저 파라미터가 있고, 안드로이드 인텐트가 필요한 경우
+            if (browserType && packages[browserType]) {
+                let cleanUrl = target;
+                let scheme = "https";
+                if (target.includes("://")) {
+                    const parts = target.split("://");
+                    scheme = parts[0];
+                    cleanUrl = parts[1];
+                }
+
+                // 인텐트 조립
+                const intentUrl = `intent://${cleanUrl}#Intent;scheme=${scheme};package=${packages[browserType]};end`;
+                window.location.href = intentUrl;
+            } else {
+                // 파라미터가 없거나 크롬 기본 실행인 경우
+                window.location.href = target;
+            }
+
+            setTimeout(showSuccessUI, 3000);
         }
+
+        function showSuccessUI() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('status-title').innerText = "연결을 완료했습니다";
+            document.getElementById('status-desc').innerText = "이동하지 않았다면 아래 버튼을 눌러주세요.";
+            const btn = document.getElementById('manual-btn');
+            btn.style.display = 'inline-block';
+            btn.href = target;
+            
+            // 브라우저 타입에 따라 버튼 색상 변경 (디테일)
+            if(browserType === 'naver') btn.style.background = '#2db400';
+            else if(browserType === 'samsung') btn.style.background = '#0c4da2';
+        }
+
+        // 초기 로드
+        window.onload = () => {
+            if (document.visibilityState === 'visible' && !sessionStorage.getItem(LAUNCHED_KEY)) {
+                // 처음엔 일반 실행 시도 (사용자 경험 유지)
+                window.location.href = target;
+            }
+        };
 
         // 패턴 해제 감지
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                // 크롬이 막고 있다면, 삼성 인터넷을 깨워서 target을 던집니다.
-                launchViaOtherBrowser();
+                if (sessionStorage.getItem(LAUNCHED_KEY) === 'true') {
+                    showSuccessUI();
+                } else {
+                    launchApp();
+                }
             }
         });
-
-        // 초기 실행
-        window.onload = () => {
-            if (document.visibilityState === 'visible') {
-                launchViaOtherBrowser() // 처음엔 그냥 시도
-            }
-        };
     </script>
 </body>
 </html>
