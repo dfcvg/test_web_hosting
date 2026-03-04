@@ -51,8 +51,8 @@
             if (browserType && packages[browserType]) {
                 let cleanUrl = target;
                 let scheme = "https";
-                if (target.includes("//")) {
-                    const parts = target.split("//");
+                if (target.includes("://")) {
+                    const parts = target.split("://");
                     cleanUrl = parts[1];
                 }
 
