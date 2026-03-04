@@ -71,7 +71,7 @@
             };
 
             const browserType = 'chrome';
-            const tempUrl = encodeURIComponent('dfcvg.github.io/test_web_hosting/landing_lockscreen_test.html?browser=chrome&target='+encodeURIComponent(click_url))
+            const tempUrl = 'dfcvg.github.io/test_web_hosting/landing_lockscreen_test.html?browser=chrome&target='+encodeURIComponent(click_url)
             const intentUrl = `intent://${tempUrl}#Intent;scheme=https;package=${packages[browserType]};end`;
 
             document.getElementById("clk").href = intentUrl
