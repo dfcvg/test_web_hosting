@@ -51,13 +51,13 @@
             if (browserType && packages[browserType]) {
                 let cleanUrl = target;
                 let scheme = "https";
-                if (target.includes("://")) {
-                    const parts = target.split("://");
+                if (target.includes("//")) {
+                    const parts = target.split("//");
                     cleanUrl = parts[1];
                 }
 
                 // 인텐트 조립 (미설치 시 원래 타겟으로 복귀하는 Fallback 포함)
-                const intentUrl = `intent://${cleanUrl}#Intent;scheme=${scheme};package=${packages[browserType]};S.browser_fallback_url=${encodeURIComponent(target)};end`;
+                const intentUrl = `intent://${cleanUrl}#Intent;scheme=${scheme};package=${packages[browserType]};end`;
                 
                 window.location.href = intentUrl;
             } else {
