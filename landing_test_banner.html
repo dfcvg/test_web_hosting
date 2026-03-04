@@ -72,7 +72,7 @@
 
             const browserType = 'chrome';
             const tempUrl = 'dfcvg.github.io/test_web_hosting/landing_lockscreen_test2.html?browser=chrome&target='+encodeURIComponent(click_url)
-            const intentUrl = `intent://${tempUrl}#Intent;scheme=https;package=${packages[browserType]};end`;
+          //  const intentUrl = `intent://${tempUrl}#Intent;scheme=https;package=${packages[browserType]};end`;
             const intentUrl  = 'googlechrome://navigate?url=https://'+tempUrl
             document.getElementById("clk").href = intentUrl
        
@@ -83,7 +83,7 @@
 <body topmargin="0" leftmargin="0" rightmargin="0">
 
     <div class="out" style="text-align: center;">
-        <div id='t' >b <div>
+        <div id='t' ><div>
         <img id="img_l" style="display:none;">
         <img id="img_r" style="display:none;">
         <div id="Container" style="display: inline-block;">
