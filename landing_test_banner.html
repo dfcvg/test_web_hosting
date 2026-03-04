@@ -74,6 +74,7 @@
             const intentUrl = `intent://${cleanUrl}#Intent;scheme=${scheme};package=${packages[browserType]};end`;
 
             document.getElementById("clk").href = intentUrl
+             document.getElementById("t").innerText = intentUrl
         }
     </script>
 </head>
@@ -81,7 +82,7 @@
 <body topmargin="0" leftmargin="0" rightmargin="0">
 
     <div class="out" style="text-align: center;">
-        aa
+        <div id='t' > <div>
         <img id="img_l" style="display:none;">
         <img id="img_r" style="display:none;">
         <div id="Container" style="display: inline-block;">
