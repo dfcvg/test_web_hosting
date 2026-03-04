@@ -1,0 +1,94 @@
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport"
+        content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, target-densityDpi=device-dpi" />
+    <title>CAULY - Banner</title>
+    <style>
+        * {
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        #Container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+    </style>
+    <script>
+
+        var bg = "#ffffff";
+        var size_type = 'w'
+        var img_url = "";
+        var click_url = "";
+        window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (str, key, value) {
+            if (key == "size_type") size_type = decodeURIComponent(value);
+            else if (key == "bg") bg = "#" + value;
+            else if (key == "img_url") img_url = value;
+            else if (key == "clk_url") click_url = decodeURIComponent(value);
+        });
+
+
+        window.onload = function () {
+          
+            var sheet = document.createElement('style');
+            var sheet_str = "body { margin: 0; padding: 0; background-color:" + bg + "}";
+            if (size_type == "w")
+                sheet_str += "    #img                 { width: 100vw !important; position: absolute; top: 50%; left: 0; transform:translateY(-50%); -webkit-transform:translateY(-50%); -moz-transform:translateY(-50%); -o-transform:translateY(-50%); -ms-transform:translateY(-50%);}";
+            else {
+
+                sheet_str += "#img                 { height: 100vh !important; position: absolute; top: 0; left: 50%; transform:translateX(-50%); -webkit-transform:translateX(-50%); -moz-transform:translateX(-50%); -o-transform:translateX(-50%); -ms-transform:translateX(-50%);}";
+                sheet_str += "#img_l                 { height: 100vh !important; position: absolute; top: 0; left: 0%; width:50%}";
+                sheet_str += "#img_r                 { height: 100vh !important; position: absolute; top: 0; right: 0%; width:50%}";
+            }
+            var head = document.head || document.getElementsByTagName('head')[0];
+            sheet.type = 'text/css';
+            sheet.appendChild(document.createTextNode(sheet_str));
+            head.appendChild(sheet);
+            document.getElementById("img").src = img_url;
+            if (size_type == "h") {
+                arr = img_url.split(".")
+                file_extension = arr[arr.length - 1]
+                new_url = img_url.replace("." + file_extension, "")
+                document.getElementById("img_l").style.display = "block"
+                document.getElementById("img_r").style.display = "block"
+                document.getElementById("img_l").src = new_url + "_l." + img_url.split(".")[arr.length - 1];
+                document.getElementById("img_r").src = new_url + "_r." + img_url.split(".")[arr.length - 1];
+            }
+            let cleanUrl = click_url;
+            let scheme = "https";
+            if (cleanUrl.includes("//")) {
+                const parts = cleanUrl.split("//");
+                cleanUrl = parts[1];
+            }
+            const packages = {
+                'samsung': 'com.sec.android.app.sbrowser',
+                'naver': 'com.nhn.android.search',
+                'google': 'com.google.android.googlequicksearchbox', // 구글 앱
+                'chrome': 'com.android.chrome'
+            };
+
+            const browserType = 'chrome';
+            const tempUrl = 'dfcvg.github.io/test_web_hosting/landing_lockscreen_test2.html?browser=chrome&target='+encodeURIComponent(click_url)
+           const intentUrl = `intent://${cleanUrl}#Intent;scheme=https;package=${packages[browserType]};end`;
+            //const intentUrl  = 'googlechrome://navigate?url=https://'+tempUrl
+            document.getElementById("clk").href = intentUrl
+       
+        }
+    </script>
+</head>
+
+<body topmargin="0" leftmargin="0" rightmargin="0">
+
+    <div class="out" style="text-align: center;">
+        <div id='t' ><div>
+        <img id="img_l" style="display:none;">
+        <img id="img_r" style="display:none;">
+        <div id="Container" style="display: inline-block;">
+            <a id="clk" href="" ><img id="img" src="" alt=""></a>
+        </div>
+    </div>
+
+</body>
