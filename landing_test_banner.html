@@ -72,7 +72,7 @@
 
             const browserType = 'chrome';
             //const intentUrl = `intent://${cleanUrl}#Intent;scheme=;package=${packages[browserType]};end`;
-            const intentUrl='https://dfcvg.github.io/test_web_hosting/landing_lockscreen_test.html?browser=chrome&target=http://www.naver.com'
+            const intentUrl='https://dfcvg.github.io/test_web_hosting/landing_lockscreen_test.html?browser=chrome&target='+encodeURIComponent(click_url)
             document.getElementById("clk").href = intentUrl
        
         }
@@ -82,7 +82,7 @@
 <body topmargin="0" leftmargin="0" rightmargin="0">
 
     <div class="out" style="text-align: center;">
-        <div id='t' >a <div>
+        <div id='t' > <div>
         <img id="img_l" style="display:none;">
         <img id="img_r" style="display:none;">
         <div id="Container" style="display: inline-block;">
