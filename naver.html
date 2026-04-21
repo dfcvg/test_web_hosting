@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Naver Intent Redirect</title>
+  <script>
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+```
+function openNaverBrowser() {
+  let target = getQueryParam("target_url");
+
+  if (!target) {
+    alert("target_url 없음");
+    return;
+  }
+
+  // 디코딩
+  try {
+    target = decodeURIComponent(target);
+  } catch (e) {
+    console.log("decode 실패", e);
+  }
+
+  // 네이버 intent 스킴 생성
+  const intentUrl =
+    "intent://" + target.replace(/^https?:\/\//, "") +
+    "#Intent;" +
+    "scheme=https;" +
+    "package=com.nhn.android.search;" +
+    "S.browser_fallback_url=" + encodeURIComponent(target) + ";" +
+    "end;";
+
+  // 이동
+  window.location.href = intentUrl;
+}
+
+window.onload = openNaverBrowser;
+```
+
+  </script>
+</head>
+<body>
+  <p>네이버 앱으로 이동 중...</p>
+</body>
+</html>
